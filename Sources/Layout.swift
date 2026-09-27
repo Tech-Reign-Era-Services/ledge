@@ -39,14 +39,14 @@ struct ShelfLayout: Equatable {
 
 enum Geometry {
     static let ear = 38 // room either side of the notch for the newest item and the count
-    static let noNotchWidth = 200 // the hover strip on screens without a notch
-    static let edgeHeight = 5 // …and its height, so it never covers menu bar items
+    static let noNotchWidth = 200 // the island's centre line on screens without a notch
     static let openWidth = 640
     static let openHeight = 174
     static let shoulder = 10 // the inward curves where the island meets the top of the screen, like the notch's own
     static let side = 34 // open: room beside and below the island for its shoulders, shadow and springy overshoot
     static let below = 48
     static let pillWidth = 184 // no notch: the island when something is live or on the Shelf, like the iPhone's
+    static let idlePillWidth = 96 // …and when there's nothing to show: a small pill, always there to hover or drop onto
     static let row = 64 // one live activity in the open island
     static let maxRows = 2
     static let reachX = 80 // while dragging, how far beside the closed island the pointer opens the Shelf
@@ -82,9 +82,8 @@ enum Geometry {
         let pillInset = (menuBar - pillHeight) / 2
         let islandClosed: Size
         if hasNotch { islandClosed = Size(width: fit(Double(n.width + (shows ? ear * 2 : 0))), height: n.height) }
-        else if shows { islandClosed = Size(width: fit(Double(pillWidth)), height: pillHeight) }
-        else { islandClosed = Size(width: fit(Double(n.width)), height: edgeHeight) } // nearly invisible, but catches the pointer and drops
-        let closedInset = !hasNotch && shows ? pillInset : 0
+        else { islandClosed = Size(width: fit(Double(shows ? pillWidth : idlePillWidth)), height: pillHeight) }
+        let closedInset = hasNotch ? 0 : pillInset
         let openInset = hasNotch ? 0 : pillInset
         // An empty Shelf is exactly the notch (invisible). With something to show, the window also fits the shoulders.
         let closed = box(islandClosed.width + (hasNotch && shows ? shoulder * 2 : 0), islandClosed.height + closedInset)

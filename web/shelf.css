@@ -98,15 +98,12 @@ body:not(.has-items):not(.live):not(.is-open) .shoulder { opacity: 0; }
 .clip.gulp { animation: gulp 0.5s var(--bouncy); }
 @keyframes gulp { 35% { transform: scale(1.025, 1.06); } }
 
-/* No notch: a thin strip at the top edge. Nearly invisible, but it still catches the pointer and drops. */
-body.flat:not(.is-open) .clip { background: rgba(0, 0, 0, 0.01); border-radius: 0 0 6px 6px; }
+/* No notch: a floating pill in the middle of the menu bar, always there, like the iPhone's Dynamic Island. Small when
+   there's nothing to show, wider when something is live or on the Shelf. Open, it grows out of the pill with every
+   corner rounded. */
+body.flat:not(.is-open) .clip { background: #000; border-radius: calc(var(--h) / 2); box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.14), 0 2px 8px rgba(0, 0, 0, 0.22); }
 body.flat .shoulder { display: none; }
 body.flat:not(.has-items):not(.live) .ears { display: none; }
-
-/* No notch, but something to show: a floating pill in the middle of the menu bar, like the iPhone's Dynamic Island.
-   Open, it grows out of the pill with every corner rounded. */
-body.flat.has-items:not(.is-open) .clip,
-body.flat.live:not(.is-open) .clip { background: #000; border-radius: calc(var(--h) / 2); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22); }
 body.flat.is-open .clip { border-radius: 30px; }
 body.flat .ears { padding: 0 8px 0 5px; }
 body.flat .ear-thumb, body.flat .ear-thumb img { width: 16px; height: 16px; border-radius: 50%; }
