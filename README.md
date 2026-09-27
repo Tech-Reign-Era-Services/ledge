@@ -36,7 +36,7 @@ You need the Xcode Command Line Tools (`xcode-select --install`), not Xcode itse
 ./build.sh          # dist/Ledge.app, universal (Apple silicon + Intel)
 ./build.sh run      # build and open it
 ./build.sh test     # run the tests
-./build.sh dist     # also dist/Ledge-<version>.zip and .pkg
+./build.sh dist     # also dist/Ledge-<version>.zip and .pkg, then checks the size budget
 ```
 
 Requires macOS 13 or later.
@@ -58,4 +58,15 @@ scripts/            the icon, and the installer's pre/postinstall scripts
 Items are saved in `~/Library/Application Support/Ledge/shelf.json`.
 
 For development, `LEDGE_DEBUG=1` logs state changes, and `LEDGE_SNAPSHOT=out.png LEDGE_STATE=open` draws the island
-to a PNG and quits.
+to a PNG and quits. See [CONTRIBUTING.md](CONTRIBUTING.md) to help out.
+
+## Releasing (maintainers)
+
+1. Bump `VERSION` and add an entry to the top of `CHANGELOG.md`.
+2. Commit, then tag and push: `git tag v1.1.0 && git push origin v1.1.0`.
+3. The **Release** GitHub Action runs the tests, builds the universal app, `.zip` and `.pkg`, checks the size budget, and
+   attaches them to a draft release using `.github/release-notes.md`. Add the version's changelog to the draft, then publish it.
+
+## License
+
+[MIT](LICENSE). Made by Tech Reign Era Services.

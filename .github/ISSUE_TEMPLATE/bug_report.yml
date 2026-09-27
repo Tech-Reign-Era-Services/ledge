@@ -1,0 +1,76 @@
+name: Bug report
+description: Something in Ledge doesn't work the way it should.
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+        **Security problems** (Ledge losing or moving files, or sending anything over the network): please [report them privately](https://github.com/Tech-Reign-Era-Services/ledge/security/advisories/new) instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: I dragged a PDF from Finder towards the notch. I expected the Shelf to open, but nothing happened.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Hover over the notch
+        2. …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Ledge version
+      description: Menu bar icon → About Ledge, e.g. "1.0.0".
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      description: Apple menu → About This Mac.
+      placeholder: macOS 15.3
+    validations:
+      required: true
+  - type: dropdown
+    id: chip
+    attributes:
+      label: Mac type
+      options:
+        - Apple silicon (M1, M2, M3, M4…)
+        - Intel
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: notch
+    attributes:
+      label: Does your screen have a notch?
+      options:
+        - Yes, the built-in screen has a notch
+        - No notch (older Mac or an external display)
+        - Both (a notched MacBook with an external display)
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install Ledge?
+      options:
+        - Installer (.pkg) from GitHub Releases
+        - Zip from GitHub Releases
+        - Built it myself from source
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots help a lot. Please blur any file names you don't want to share.

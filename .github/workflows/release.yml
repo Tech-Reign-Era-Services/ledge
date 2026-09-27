@@ -1,0 +1,44 @@
+# Builds the universal app (Apple silicon + Intel), its .zip and its .pkg installer, and attaches them to a
+# draft GitHub release. Push a tag like v1.1.0 to run it, or start it by hand from the Actions tab with a tag name.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build, e.g. v1.0.1'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Check the tag matches VERSION
+        run: |
+          WANT="v$(tr -d '[:space:]' < VERSION)"
+          if [ "$WANT" != "$TAG" ]; then echo "Tag $TAG doesn't match VERSION ($WANT)"; exit 1; fi
+
+      # Tests, then the app, .zip and .pkg, then the size budget.
+      - run: ./build.sh dist
+
+      - name: Attach the downloads to a draft release
+        run: |
+          VERSION="${TAG#v}"
+          sed "s/VERSION/$VERSION/g" .github/release-notes.md > notes.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/Ledge-*.zip dist/Ledge-*.pkg --clobber
+          else
+            gh release create "$TAG" dist/Ledge-*.zip dist/Ledge-*.pkg --draft --title "Ledge $VERSION" --notes-file notes.md
+          fi
