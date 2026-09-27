@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ledge: a Shelf in your Mac's notch</title>
+<meta name="description" content="Ledge is a free, open-source Mac app that turns the notch into a Shelf. Drag files, text and links to it, then drag them out wherever they need to go. It also shows the song that's playing and what your other apps are doing, like the Dynamic Island. About 1 MB.">
+<link rel="canonical" href="https://tech-reign-era-services.github.io/ledge/">
+<meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1b1c20" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Ledge">
+<meta property="og:title" content="Ledge: a Shelf in your Mac's notch">
+<meta property="og:description" content="Drag files, text and links to the notch, then drag them out wherever they go. Plus live activities, like the Dynamic Island. Free, open source, about 1 MB.">
+<meta property="og:url" content="https://tech-reign-era-services.github.io/ledge/">
+<meta property="og:image" content="https://tech-reign-era-services.github.io/ledge/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Ledge's icon and name: a Shelf in your Mac's notch">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Ledge: a Shelf in your Mac's notch">
+<meta name="twitter:description" content="Drag files, text and links to the notch, then drag them out wherever they go. Free and open source.">
+<meta name="twitter:image" content="https://tech-reign-era-services.github.io/ledge/assets/og.png">
+
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="assets/favicon-64.png" type="image/png" sizes="64x64">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preload" as="image" href="assets/hero-poster.webp" type="image/webp">
+<link rel="stylesheet" href="styles.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Ledge",
+  "description": "A free, open-source Mac app that turns the notch into a Shelf for files, text and links, with live activities like the Dynamic Island.",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "macOS 13 or later",
+  "softwareVersion": "1.2.0",
+  "url": "https://tech-reign-era-services.github.io/ledge/",
+  "downloadUrl": "https://github.com/Tech-Reign-Era-Services/ledge/releases/latest",
+  "image": "https://tech-reign-era-services.github.io/ledge/assets/og.png",
+  "screenshot": "https://tech-reign-era-services.github.io/ledge/assets/shelf.webp",
+  "video": {
+    "@type": "VideoObject",
+    "name": "Ledge in 20 seconds",
+    "description": "Files dragged to the notch, one dragged out into an email, a song playing in the island, and a build's progress from another app.",
+    "thumbnailUrl": "https://tech-reign-era-services.github.io/ledge/assets/hero-poster.jpg",
+    "contentUrl": "https://tech-reign-era-services.github.io/ledge/assets/hero.mp4",
+    "uploadDate": "2026-09-27",
+    "duration": "PT20S"
+  },
+  "license": "https://opensource.org/licenses/MIT",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Organization", "name": "Tech Reign Era Services", "url": "https://github.com/Tech-Reign-Era-Services" }
+}
+</script>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav" id="top">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top" aria-label="Ledge home">
+      <img src="assets/icon-256.png" alt="" width="32" height="32">
+      <span>Ledge</span>
+    </a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#shelf">Shelf</a>
+      <a href="#live">Live activities</a>
+      <a href="#apps">For developers</a>
+      <a href="#install">Install</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="gh-link" href="https://github.com/Tech-Reign-Era-Services/ledge" aria-label="Ledge on GitHub">
+        <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      </a>
+      <a class="btn btn-sm btn-primary" href="https://github.com/Tech-Reign-Era-Services/ledge/releases/latest" data-download>Download</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">Free &amp; open source · for Mac</p>
+        <h1>A Shelf in your notch. <span class="accent">Drop it there, pick it up later.</span></h1>
+        <p class="lede">Drag files, text and links to the top of your screen and Ledge keeps them there for a moment, then you drag them out wherever they need to go. While music plays or an app is busy, the notch shows it, like the Dynamic Island on iPhone.</p>
+        <div class="cta-row">
+          <a class="btn btn-lg btn-primary" href="https://github.com/Tech-Reign-Era-Services/ledge/releases/latest" data-download>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" class="apple"><path fill="currentColor" d="M16.37 12.63c-.02-2.26 1.85-3.35 1.93-3.4-1.05-1.54-2.69-1.75-3.27-1.77-1.39-.14-2.72.82-3.42.82-.71 0-1.8-.8-2.96-.78-1.52.02-2.93.89-3.71 2.25-1.58 2.75-.4 6.81 1.14 9.04.75 1.09 1.65 2.31 2.82 2.27 1.13-.05 1.56-.73 2.93-.73 1.36 0 1.75.73 2.95.71 1.22-.02 1.99-1.11 2.73-2.2.86-1.26 1.22-2.49 1.24-2.55-.03-.01-2.37-.91-2.38-3.61v-.05ZM14.12 5.98c.62-.76 1.04-1.8.93-2.85-.9.04-1.99.6-2.63 1.35-.58.67-1.08 1.74-.95 2.77 1 .08 2.03-.51 2.65-1.27Z"/></svg>
+            Download for Mac
+          </a>
+          <a class="btn btn-lg btn-ghost" href="https://github.com/Tech-Reign-Era-Services/ledge">View on GitHub</a>
+        </div>
+        <p class="fineprint" data-release-meta>Free · One download for Apple silicon and Intel · macOS 13 Ventura or later</p>
+        <p class="not-mac" hidden>Ledge is a Mac app. Open this page on your Mac to download it, or <button type="button" class="linklike" data-copy-link>copy the link</button>.</p>
+      </div>
+      <div class="hero-visual">
+        <figure class="hero-video">
+          <video autoplay muted loop playsinline preload="auto" width="1600" height="900" poster="assets/hero-poster.webp" aria-label="Ledge in 20 seconds: two files dragged from Finder to the notch, one dragged out into an email, a song playing in the island, and a build's progress from another app." data-hero-video>
+            <source src="assets/hero.webm" type="video/webm">
+            <source src="assets/hero.mp4" type="video/mp4">
+            <img src="assets/hero-poster.jpg" width="1600" height="900" alt="Ledge open under the notch, showing the song that's playing and two files on the Shelf.">
+          </video>
+          <button type="button" class="video-toggle" data-video-toggle aria-label="Pause video">
+            <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+            <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>
+          </button>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust strip -->
+  <section class="trust" aria-label="Promises">
+    <ul class="wrap trust-list">
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Free, no catch</li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>Open source (MIT)</li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>About 1 MB</li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Files never copied or moved</li>
+    </ul>
+  </section>
+
+  <!-- Shelf -->
+  <section class="section" id="shelf">
+    <div class="wrap">
+      <header class="section-head">
+        <p class="eyebrow">The Shelf</p>
+        <h2>Somewhere to put things down</h2>
+        <p>Moving a file from one window to another, and the other window is buried? Drop it on the notch, find the other window, and take it back off.</p>
+      </header>
+
+      <figure class="shot">
+        <img src="assets/shelf-1200.webp" srcset="assets/shelf-1200.webp 1200w, assets/shelf.webp 2000w" sizes="(min-width: 1100px) 1064px, 100vw" width="2000" height="524" loading="lazy" decoding="async" alt="The Shelf open under the notch, holding a photo, a PDF, a screenshot, a zip file, a note and a link.">
+      </figure>
+
+      <ul class="points">
+        <li><strong>Drag anything toward the notch</strong> and the Shelf opens before you get there. Files, folders, text and links all work.</li>
+        <li><strong>Drag them out</strong> to Finder, Mail, Slack or a browser's upload box. Or select them, press <kbd>⌘</kbd><kbd>C</kbd>, and <kbd>⌘</kbd><kbd>V</kbd> anywhere.</li>
+        <li><strong>Hover to peek,</strong> or press <kbd>⌃</kbd><kbd>⌥</kbd><kbd>S</kbd> from any app to open it.</li>
+        <li><strong><kbd>Space</kbd> opens Quick Look,</strong> just like in Finder. <kbd>⌘</kbd><kbd>V</kbd> in the Shelf adds whatever you copied.</li>
+        <li><strong>Files are kept by reference:</strong> Ledge never copies, moves or changes them.</li>
+        <li><strong>Closed, it's out of the way:</strong> just the newest item on one side of the notch and a count on the other.</li>
+      </ul>
+
+      <div class="shots">
+        <figure class="shot"><img src="assets/drop.webp" width="2000" height="524" loading="lazy" decoding="async" alt="The Shelf opening to take two files being dragged to it: a dashed outline says “Drop 2 items on the Shelf”."></figure>
+        <figure class="shot"><img src="assets/closed.webp" width="2000" height="144" loading="lazy" decoding="async" alt="The closed Shelf in the menu bar: a thumbnail of the newest item to the left of the notch and the number 6 to the right."></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live activities -->
+  <section class="section section-tint" id="live">
+    <div class="wrap">
+      <header class="section-head">
+        <p class="eyebrow">Live activities</p>
+        <h2>What's happening, right in the notch</h2>
+        <p>Like the Dynamic Island on iPhone, the notch shows what's going on, and grows out of itself when you hover.</p>
+      </header>
+
+      <figure class="shot">
+        <img src="assets/both-1200.webp" srcset="assets/both-1200.webp 1200w, assets/both.webp 2000w" sizes="(min-width: 1100px) 1064px, 100vw" width="2000" height="784" loading="lazy" decoding="async" alt="The island open: the song Northern Lights playing with its artwork, a progress bar and play controls, a “Building Ledge” activity from Xcode with its progress, and the Shelf's items below.">
+      </figure>
+
+      <div class="shots">
+        <figure class="shot"><img src="assets/music-closed.webp" width="2000" height="144" loading="lazy" decoding="async" alt="While music plays, the closed island shows the album artwork and four bars moving to the music."></figure>
+        <figure class="shot"><img src="assets/build-closed.webp" width="2000" height="144" loading="lazy" decoding="async" alt="While a build runs, the closed island shows a hammer and a progress ring."></figure>
+      </div>
+
+      <ul class="points">
+        <li><strong>Music:</strong> while Apple Music or Spotify plays, the album artwork and bars that move to the music itself, bass to treble. Hover for the song, a progress bar, and play, pause and skip.</li>
+        <li><strong>Nothing is recorded.</strong> On macOS 14.2 or later, macOS asks once for System Audio Recording so the bars can follow the sound. Nothing is saved.</li>
+        <li><strong>Other apps</strong> can show a build, an upload or a timer, with a title, a symbol or emoji, and progress.</li>
+        <li><strong>Settings</strong> let you make the pill wider, taller or lower, open it on hover or only on a click, and pick the bars' colour.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- For developers -->
+  <section class="section" id="apps">
+    <div class="wrap split">
+      <div>
+        <p class="eyebrow">For developers</p>
+        <h2>Show your app in the island</h2>
+        <p>There's no SDK. Any app or script can start, update and end a live activity by opening a URL, or by posting a notification.</p>
+        <p>Everything is treated as untrusted: text is shown as text, never as markup, and at most four app activities show at once. <a href="https://github.com/Tech-Reign-Era-Services/ledge#show-your-app-in-the-island">All the fields are in the README.</a></p>
+      </div>
+      <div>
+<pre class="code"><code><span class="c"># Start (or update) an activity</span>
+open -g "ledge://activity?id=build&amp;title=Building&amp;symbol=hammer.fill&amp;progress=0.4"
+
+<span class="c"># Update only what changed</span>
+open -g "ledge://activity?id=build&amp;progress=0.9"
+
+<span class="c"># End it</span>
+open -g "ledge://activity/end?id=build"</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- No notch -->
+  <section class="section section-tint" id="no-notch">
+    <div class="wrap">
+      <header class="section-head">
+        <p class="eyebrow">No notch? No problem.</p>
+        <h2>Works on every screen</h2>
+        <p>On an external display, a Mac mini, or any Mac without a notch, the island is a small pill in the middle of the menu bar. It's always there to drop onto, and grows out of itself when you hover.</p>
+      </header>
+      <figure class="shot">
+        <img src="assets/pill.webp" width="2000" height="128" loading="lazy" decoding="async" alt="A menu bar without a notch: the island is a black pill in the middle, showing album artwork and music bars.">
+      </figure>
+    </div>
+  </section>
+
+  <!-- Size -->
+  <section class="section" id="small">
+    <div class="wrap">
+      <header class="section-head">
+        <p class="eyebrow">Tiny</p>
+        <h2>About 1 MB, and quiet</h2>
+        <p>The Shelf used to be part of <a href="https://tech-reign-era-services.github.io/inlet/">Inlet</a>, built with Electron. Ledge is the same design running in the WebKit that ships with macOS, with a few hundred lines of Swift and no dependencies.</p>
+      </header>
+      <div class="sizes">
+        <div class="size us"><b>1.1 MB</b><p>Ledge, the whole app. The download is about 620 KB.</p></div>
+        <div class="size"><b>217 MB</b><p>Inlet's Electron build, where the Shelf used to live.</p></div>
+      </div>
+      <ul class="points">
+        <li><strong>Uses no CPU while it waits.</strong> Nothing animates that you can't see.</li>
+        <li><strong>Private.</strong> No account, no analytics. Its only network request downloads the artwork of the song Spotify is playing.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Install -->
+  <section class="section section-tint" id="install">
+    <div class="wrap">
+      <header class="section-head">
+        <p class="eyebrow">Install</p>
+        <h2>Up and running in a minute</h2>
+        <p>One download works on every Mac, Apple silicon and Intel alike. Needs macOS 13 Ventura or later.</p>
+      </header>
+      <ol class="steps">
+        <li>
+          <span class="step-n">1</span>
+          <h3>Download</h3>
+          <p>Get <b data-pkg-name>Ledge.pkg</b> from the button below, or from <a href="https://github.com/Tech-Reign-Era-Services/ledge/releases/latest">GitHub Releases</a>.</p>
+        </li>
+        <li>
+          <span class="step-n">2</span>
+          <h3>Open it the first time</h3>
+          <p><b>Right-click</b> the <code>.pkg</code>, choose <b>Open</b>, then <b>Open</b> again. See the note below for why.</p>
+        </li>
+        <li>
+          <span class="step-n">3</span>
+          <h3>Install</h3>
+          <p>Click <b>Continue</b> and <b>Install</b>. Ledge opens by itself: hover over the notch, or drag something to it.</p>
+        </li>
+      </ol>
+
+      <aside class="note" id="gatekeeper">
+        <div class="note-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4M12 16h.01"/></svg></div>
+        <div>
+          <h3>Why macOS asks “Apple could not verify…”</h3>
+          <p>Apple charges developers a yearly fee to sign apps. Ledge is free, so it isn't signed, and macOS asks you to confirm once. The full source code is public on GitHub, so anyone can check what Ledge does.</p>
+          <p><b>No Open button?</b> On newer macOS, try to open the installer once and close the warning. Then go to <b>System Settings → Privacy &amp; Security</b>, scroll down, and click <b>Open Anyway</b> next to the message about Ledge.</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" id="faq">
+    <div class="wrap narrow">
+      <header class="section-head">
+        <p class="eyebrow">FAQ</p>
+        <h2>Questions</h2>
+      </header>
+      <div class="faq">
+        <details>
+          <summary>Is Ledge really free?</summary>
+          <p>Yes. No trial, no subscription, no ads, no account. It's open source under the MIT license, made by Tech Reign Era Services.</p>
+        </details>
+        <details>
+          <summary>What happens to a file I put on the Shelf?</summary>
+          <p>Nothing. Ledge only remembers where the file is. It's never copied, moved or changed, and removing it from the Shelf leaves the file where it was.</p>
+        </details>
+        <details>
+          <summary>My Mac doesn't have a notch. Does it work?</summary>
+          <p>Yes. Without a notch, like on an external display or a Mac mini, the island is a small pill in the middle of the menu bar.</p>
+        </details>
+        <details>
+          <summary>Why does it ask to record system audio?</summary>
+          <p>So the music bars can move to the song that's playing, bass to treble. It listens to Apple Music or Spotify only while they play, and nothing is recorded or saved. Say no and the bars simply dance by themselves. This needs macOS 14.2 or later.</p>
+        </details>
+        <details>
+          <summary>I used the Shelf in Inlet. What happens to my items?</summary>
+          <p>The first time Ledge runs, it brings over anything that was on Inlet's Shelf.</p>
+        </details>
+        <details>
+          <summary>How do I update?</summary>
+          <p>Download the new installer and run it. It quits Ledge for you and keeps your Shelf and settings. To hear about new versions, open the <a href="https://github.com/Tech-Reign-Era-Services/ledge">GitHub page</a>, click <b>Watch</b>, and choose <b>Releases</b>.</p>
+        </details>
+        <details>
+          <summary>How do I uninstall it?</summary>
+          <p>Choose <b>Quit Ledge</b> from its menu bar icon and move it from Applications to the Trash. To remove its settings too, delete <code>~/Library/Application Support/Ledge</code>. Your files aren't touched.</p>
+        </details>
+        <details>
+          <summary>I found a bug or have an idea.</summary>
+          <p>Please <a href="https://github.com/Tech-Reign-Era-Services/ledge/issues/new/choose">open an issue</a>. Pull requests are welcome too.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section class="final">
+    <div class="wrap final-inner">
+      <img src="assets/icon-256.png" alt="" width="88" height="88" loading="lazy">
+      <h2>Give your notch something to do</h2>
+      <p>Free, open source, and yours to keep.</p>
+      <div class="cta-row cta-center">
+        <a class="btn btn-lg btn-primary" href="https://github.com/Tech-Reign-Era-Services/ledge/releases/latest" data-download>Download for Mac</a>
+        <a class="btn btn-lg btn-ghost" href="https://github.com/Tech-Reign-Era-Services/ledge">Star on GitHub</a>
+      </div>
+      <p class="fineprint" data-release-meta>Free · One download for Apple silicon and Intel · macOS 13 Ventura or later</p>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <p>© 2026 Tech Reign Era Services · <a href="https://github.com/Tech-Reign-Era-Services/ledge/blob/main/LICENSE">MIT License</a></p>
+    <nav aria-label="Project links">
+      <a href="https://github.com/Tech-Reign-Era-Services/ledge">Source</a>
+      <a href="https://github.com/Tech-Reign-Era-Services/ledge/releases">Releases</a>
+      <a href="https://github.com/Tech-Reign-Era-Services/ledge/blob/main/CONTRIBUTING.md">Contribute</a>
+      <a href="https://github.com/Tech-Reign-Era-Services/ledge/blob/main/SECURITY.md">Security</a>
+      <a href="https://tech-reign-era-services.github.io/inlet/">Inlet</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="main.js" defer></script>
+</body>
+</html>

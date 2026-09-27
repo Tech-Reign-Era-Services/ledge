@@ -2,10 +2,23 @@
 
 A Shelf in your Mac's notch. Keep files, text and links there for a moment, then drop them where they need to go.
 
+**[tech-reign-era-services.github.io/ledge](https://tech-reign-era-services.github.io/ledge/)**
+
+![Ledge: dragging files to the notch, dragging one out into an email, music playing in the island, and a build's progress](docs/demo.gif)
+
+<sub>20 seconds, no sound. [Watch it in full quality (MP4)](docs/demo.mp4).</sub>
+
 - **Hover** over the notch to peek, **drag** anything toward it to drop it in, or press **⌃⌥S** to open it.
 - Drag items out to Finder, Mail, Slack or a browser upload box. Or select them, press **⌘C**, and **⌘V** anywhere.
 - **Space** opens Quick Look, just like in Finder. **⌘V** in the Shelf adds whatever is on the clipboard.
 - Files are kept by reference: never copied, never moved. On a Mac without a notch, the Shelf sits in the middle of the menu bar.
+
+![The Shelf open under the notch, with a photo, a PDF, a screenshot, a zip, a note and a link](docs/screenshots/shelf.png)
+
+Drag something toward the notch and the Shelf opens to take it. Closed, it shows the newest item and how many there are:
+
+![The Shelf opening to take two dragged files](docs/screenshots/drop.png)
+![The closed Shelf: the newest item's thumbnail on one side of the notch, the count on the other](docs/screenshots/closed.png)
 
 **Live activities**, like the Dynamic Island on iPhone:
 
@@ -13,6 +26,14 @@ A Shelf in your Mac's notch. Keep files, text and links there for a moment, then
 - **Other apps** can show what they're doing, like a build, an upload or a timer, with a title, a symbol or emoji, progress, and a few characters beside the island. See [Show your app in the island](#show-your-app-in-the-island).
 - **Settings…** in the menu bar icon (or ⌘,, or `open ledge://settings`): make the pill wider, taller or lower, the open island wider, open on hover or only on a click, and choose the music bars' colour. Changes show on the pill as you make them.
 - **No notch? No problem.** On an external display, or any Mac without a notch, the island is a floating pill in the middle of the menu bar that appears when something is live or on the Shelf, and grows out of itself when you hover.
+
+![Open: the song playing with its controls, a build's progress from another app, and the Shelf's items below](docs/screenshots/both.png)
+
+Closed, the island shows what's live beside the notch: the album artwork and bars that move to the music, or an app's symbol and its progress. Without a notch, the same thing sits in a pill:
+
+![Closed, while music plays: the album artwork and moving bars](docs/screenshots/music-closed.png)
+![Closed, while a build runs: a hammer and a progress ring](docs/screenshots/build-closed.png)
+![A Mac without a notch: the island as a pill in the middle of the menu bar](docs/screenshots/pill.png)
 
 The Shelf used to be part of [Inlet](https://github.com/Tech-Reign-Era-Services/inlet). The first time Ledge runs, it brings over anything that was on Inlet's Shelf.
 
@@ -65,15 +86,15 @@ Everything is treated as untrusted: text is shown as text, never as markup, and 
 
 ## Why it's so small
 
-Ledge is about 840 KB. Inlet's Electron build is 217 MB. The island is still the same HTML, CSS and JavaScript,
+Ledge is about 1.1 MB. Inlet's Electron build is 217 MB. The island is still the same HTML, CSS and JavaScript,
 so the design and animations haven't changed, but it runs in the WebKit that ships with macOS instead of a bundled
 Chromium. Everything else (the window over the notch, dragging, Quick Look, the clipboard, the shortcut) is a few
 hundred lines of Swift, with no dependencies.
 
 | | Inlet's Shelf (Electron) | Ledge |
 |---|---|---|
-| App size | 217 MB (the whole of Inlet) | 840 KB |
-| Download | 217 MB `.pkg` | ~470 KB `.zip` or `.pkg` |
+| App size | 217 MB (the whole of Inlet) | 1.1 MB |
+| Download | 217 MB `.pkg` | ~620 KB `.zip` or `.pkg` |
 | Drag detection | a long-running `osascript` | a system mouse event, then a 50 ms check only while the button is down |
 
 ## Build
@@ -103,6 +124,8 @@ Sources/
 web/                the island itself: shelf.html, shelf.css, shelf.js (from Inlet), bridge.js
 tests/main.swift    tests for Layout, ShelfStore and Activities
 scripts/            the icon, and the installer's pre/postinstall scripts
+docs/               the demo video and screenshots in this README (not part of the app)
+site/               the web page, published to GitHub Pages by .github/workflows/pages.yml
 ```
 
 Items are saved in `~/Library/Application Support/Ledge/shelf.json`.
