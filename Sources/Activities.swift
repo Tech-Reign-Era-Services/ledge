@@ -20,6 +20,7 @@ struct Activity: Equatable {
     var playing: Bool? // music
     var elapsed: Double? // music: seconds into the track at `at`
     var duration: Double? // music: seconds
+    var art: String? // music: the album artwork, a data URL fetched by the app
     var at: Double = 0 // when this was last updated, ms since 1970
     var expires: Double = .infinity // ms since 1970
 
@@ -35,6 +36,7 @@ struct Activity: Equatable {
         if let playing { d["playing"] = playing }
         if let elapsed { d["elapsed"] = elapsed }
         if let duration { d["duration"] = duration }
+        if let art { d["art"] = art }
         return d
     }
 }

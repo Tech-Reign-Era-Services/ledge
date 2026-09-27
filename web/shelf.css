@@ -472,6 +472,8 @@ body.live-playing:not(.is-open) .eq.on i { animation: eq 0.8s ease-in-out infini
 .eq.on i:nth-child(2) { animation-duration: 0.55s; animation-delay: -0.2s; }
 .eq.on i:nth-child(3) { animation-duration: 0.95s; animation-delay: -0.5s; }
 .eq.on i:nth-child(4) { animation-duration: 0.7s; animation-delay: -0.1s; }
+/* Moving to the music itself (levels from the app): no animation, just a short glide between readings. */
+body.eq-real.live-playing:not(.is-open) .eq.on i { animation: none; transition: transform 0.06s linear; }
 @keyframes eq { from { transform: scaleY(0.25); } to { transform: scaleY(1); } }
 .ring { width: 18px; height: 18px; transform: rotate(-90deg); }
 .ring circle { fill: none; stroke-width: 2.6; }
@@ -501,6 +503,11 @@ body.flat .ring { width: 16px; height: 16px; }
 .now-art { width: 40px; height: 40px; flex: none; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--ink-2); }
 .now-art img { width: 40px; height: 40px; object-fit: contain; }
 .now-art.emoji { background: var(--glass); }
+.now-art img.art { object-fit: cover; }
+/* The album artwork: a rounded square, like the iPhone's, instead of the player's icon. */
+.live-icon.art { border-radius: 5px; overflow: hidden; }
+.live-icon img.art { object-fit: cover; border-radius: 5px; }
+body.flat .live-icon.art, body.flat .live-icon.art img { width: 18px; height: 18px; border-radius: 5px; }
 .now-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .now-text b { font-weight: 600; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .now-text span { font-size: 11px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

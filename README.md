@@ -9,7 +9,7 @@ A Shelf in your Mac's notch. Keep files, text and links there for a moment, then
 
 **Live activities**, like the Dynamic Island on iPhone:
 
-- **Music:** while Apple Music or Spotify plays, the island shows the app and bars that dance to it. Hover over the island for the song, a progress bar, and play, pause and skip.
+- **Music:** while Apple Music or Spotify plays, the island shows the album artwork and bars that move to the music itself: bass to treble, from the player's own audio (macOS 14.2 or later; macOS asks once for System Audio Recording, and nothing is recorded or saved). Hover over the island for the song, a progress bar, and play, pause and skip.
 - **Other apps** can show what they're doing, like a build, an upload or a timer, with a title, a symbol or emoji, progress, and a few characters beside the island. See [Show your app in the island](#show-your-app-in-the-island).
 - **No notch? No problem.** On an external display, or any Mac without a notch, the island is a floating pill in the middle of the menu bar that appears when something is live or on the Shelf, and grows out of itself when you hover.
 

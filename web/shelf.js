@@ -466,6 +466,7 @@ function setActivities(list) {
 /** The activity's picture: an app icon or symbol the app drew, or an emoji. */
 function liveArt(a, size) {
   if (a.emoji) return h('span', { class: 'live-emoji', style: `font-size:${Math.round(size * 0.72)}px` }, a.emoji);
+  if (a.art) return h('img', { class: 'art', src: a.art, alt: '', draggable: 'false' }); // the album artwork
   if (a.icon) return h('img', { src: a.icon, alt: '', draggable: 'false' });
   return icon('dots', Math.round(size * 0.6));
 }
@@ -476,6 +477,14 @@ function trailFor(a) {
   if (a.progress != null) return ring(a.progress, a.tint);
   if (a.trailing) return h('span', { class: 'live-text' }, a.trailing);
   return null;
+}
+
+/** The music bars, moving to the music itself: levels from the app, or null to let them animate by themselves. */
+function setLevels(levels) {
+  body.classList.toggle('eq-real', !!levels);
+  document.querySelectorAll('.eq i').forEach((el, i) => {
+    el.style.transform = levels ? `scaleY(${(0.2 + 0.8 * (levels[i % levels.length] || 0)).toFixed(2)})` : '';
+  });
 }
 
 function ring(progress, tint) {
@@ -498,6 +507,7 @@ function ring(progress, tint) {
 function renderLiveEars(bump) {
   const a = S.live[0];
   $('live-icon').replaceChildren(...(a ? [liveArt(a, 20)] : []));
+  $('live-icon').classList.toggle('art', !!a?.art);
   const trail = a && trailFor(a);
   $('live-trail').replaceChildren(...(trail ? [trail] : []));
   if (bump && S.shown) replay($('live-ears'), 'bump');
@@ -557,6 +567,7 @@ $('drop-icon').append(icon('down', 18));
 api.onState(applyState);
 api.onItems(setItems);
 api.onActivities(setActivities);
+api.onLevels(setLevels);
 api.activities().then(setActivities);
 api.onFlash((ms) => later('close', ms, () => !S.hover && S.state === 'peek' && setState('closed')));
 api.items().then(setItems);

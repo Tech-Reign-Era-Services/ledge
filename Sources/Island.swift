@@ -104,6 +104,7 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
     private var watchTimer: Timer?
     private var keysTimer: Timer?
     private let drags = DragWatch()
+    private let levels = AudioLevels()
     private let preview = Preview()
     private let textDir = FileManager.default.temporaryDirectory.appendingPathComponent("Ledge Shelf")
 
@@ -149,6 +150,10 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
             guard let self, self.state == .closed else { return }
             let p = self.cursor()
             if Geometry.nearShelf(x: p.x, y: p.y, self.layout()) { self.setState(.peek) }
+        }
+        levels.onLevels = { [weak self] lv in
+            guard let self, self.state == .closed || lv == nil else { return } // the bars only show on the closed island
+            self.emit("levels", lv.map { $0.map { ($0 * 100).rounded() / 100 } } as Any? ?? NSNull())
         }
         NotificationCenter.default.addObserver(self, selector: #selector(screensChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
 
@@ -298,6 +303,8 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
     func activitiesChanged() {
         if Island.debug { NSLog("live: %@", activities.list.map(\.id).joined(separator: ", ")) }
         emit("activities", activities.json())
+        let music = activities.list.first { $0.kind == "music" && $0.playing == true }
+        levels.follow(music?.bundleID)
         place()
     }
 

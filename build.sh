@@ -68,6 +68,7 @@ app() {
       <key>CFBundleURLSchemes</key><array><string>ledge</string></array>
     </dict>
   </array>
+  <key>NSAudioCaptureUsageDescription</key><string>Ledge listens to Music or Spotify while a song plays, so the bars in the island move to the music. Nothing is recorded or saved.</string>
   <key>NSAppleEventsUsageDescription</key><string>Ledge plays, pauses and skips songs in Music and Spotify when you use the controls in the island.</string>
   <key>CFBundleDocumentTypes</key>
   <array>
