@@ -7,18 +7,24 @@ import ServiceManagement
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var island: Island!
+    private let activities = ActivityCenter()
     private var hotKey: HotKey?
     private var statusItem: NSStatusItem!
     private let menu = NSMenu()
     private let defaults = UserDefaults.standard
 
-    static let dataDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Ledge")
+    /// LEDGE_DATA_DIR=/tmp/ledge-dev keeps a development build's Shelf apart from the installed app's.
+    static let sandboxed = ProcessInfo.processInfo.environment["LEDGE_DATA_DIR"] != nil
+    static let dataDir = ProcessInfo.processInfo.environment["LEDGE_DATA_DIR"].map { URL(fileURLWithPath: $0) }
+        ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Ledge")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         importInletShelf()
         let store = ShelfStore(dir: AppDelegate.dataDir)
         let web = Bundle.main.resourceURL!.appendingPathComponent("web")
-        island = Island(store: store, webRoot: web)
+        island = Island(store: store, activities: activities, webRoot: web)
+        activities.onChange = { [weak self] _ in self?.island.activitiesChanged() }
+        activities.start()
         island.onChange = { [weak self] in self?.refreshIcon() }
 
         hotKey = HotKey(keyCode: kVK_ANSI_S, modifiers: controlKey | optionKey) { [weak self] in self?.island.toggle() }
@@ -42,7 +48,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationWillTerminate(_ notification: Notification) { island?.cleanUp() }
 
     /// Files opened with Ledge (`open -a Ledge file…`, or dropped on its icon) go on the Shelf.
+    /// ledge://activity?… and ledge://activity/end?… start, update and end another app's live activity.
     func application(_ sender: NSApplication, open urls: [URL]) {
+        for url in urls where url.scheme == "ledge" && url.host == "activity" {
+            let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            let fields = items.reduce(into: [String: String]()) { d, q in if let v = q.value { d[q.name] = v } }
+            activities.request(fields, end: url.path == "/end")
+        }
         let files = urls.filter(\.isFileURL).map(\.path)
         guard !files.isEmpty, let island else { return }
         island.addFiles(files)
@@ -118,10 +130,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     /// The Shelf used to live in Inlet: on first launch, bring across whatever is on it.
     private func importInletShelf() {
+        guard !AppDelegate.sandboxed else { return }
         let fm = FileManager.default
         let mine = AppDelegate.dataDir.appendingPathComponent("shelf.json")
         guard !fm.fileExists(atPath: mine.path) else { return }
-        let inlet = AppDelegate.dataDir.deletingLastPathComponent().appendingPathComponent("Inlet/shelf.json")
+        let inlet = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Inlet/shelf.json")
         guard fm.fileExists(atPath: inlet.path) else { return }
         try? fm.createDirectory(at: AppDelegate.dataDir, withIntermediateDirectories: true)
         try? fm.copyItem(at: inlet, to: mine)

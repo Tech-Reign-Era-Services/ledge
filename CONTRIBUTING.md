@@ -29,9 +29,16 @@ cd ledge
 ./build.sh run    # build and open it (quits a running Ledge first)
 ```
 
+**Keep your dev build apart from an installed Ledge.** They'd share a Shelf and fight over the notch. Quit the installed one first (menu bar icon → Quit Ledge), and run yours with its own folder:
+
+```bash
+LEDGE_DATA_DIR=/tmp/ledge-dev dist/Ledge.app/Contents/MacOS/Ledge
+```
+
 Useful while working:
 
 - `LEDGE_DEBUG=1 dist/Ledge.app/Contents/MacOS/Ledge` logs every state change (closed, peek, open) to the terminal. Errors in the page are logged there too, as `[page] …`.
+- `LEDGE_NO_NOTCH=1` behaves as on a screen without a notch (the floating pill), so you can work on it from a MacBook.
 - `LEDGE_SNAPSHOT=/tmp/open.png LEDGE_STATE=open dist/Ledge.app/Contents/MacOS/Ledge` draws the island in that state to a PNG and quits. Handy for before and after screenshots.
 - Only the installed app (in `/Applications`) turns on Open at Login by itself, so your dev build in `dist/` won't start with your Mac.
 
@@ -41,7 +48,8 @@ Useful while working:
 - `Sources/Island.swift`: the panel over the notch, its states and sizes, and the other end of the bridge.
 - `Sources/Native.swift`: drag detection, the global shortcut, thumbnails, the clipboard and Quick Look.
 - `Sources/Layout.swift` and `Sources/ShelfStore.swift`: where the island sits, and the items. No AppKit, so they're tested directly.
-- `Sources/App.swift`: the menu bar icon, Open at Login, and bringing Inlet's Shelf across.
+- `Sources/App.swift`: the menu bar icon, Open at Login, `ledge://` URLs, and bringing Inlet's Shelf across.
+- `Sources/Activities.swift`: live activities: what's accepted from other apps and music players, and the list. No AppKit, so it's tested directly. `Sources/LiveActivities.swift` listens for them, runs the music controls and draws icons.
 - `tests/main.swift`: the tests (the Command Line Tools have no XCTest, so it's a small executable).
 
 ## Ground rules
@@ -49,8 +57,9 @@ Useful while working:
 1. **Never touch the files.** The Shelf only points to files. It never copies, moves, renames or deletes them.
 2. **No network.** Ledge makes no network requests at all. Keep it that way.
 3. **Stay small and light.** No dependencies. `./build.sh check` fails if the app grows past its size budget, and CI runs it. Don't add work that runs while the Shelf is idle: nothing polls unless a mouse button is down or the island is open.
-4. **Keep the page safe.** File names and text are untrusted: build elements with `h()`/`textContent`, never `innerHTML`. Keep the content security policy, the `ledge://` scheme and the navigation block as they are. New bridge commands act on item ids, never on paths the page supplies.
-5. **The design is the design.** The island's look and animations come from Inlet. Changes to them should be deliberate, with before and after screenshots.
+4. **Treat live activities as untrusted.** Any app on the Mac can post one. New fields get validated and trimmed in `Activities.parse`, with a test, and links never reach the page.
+5. **Keep the page safe.** File names and text are untrusted: build elements with `h()`/`textContent`, never `innerHTML`. Keep the content security policy, the `ledge://` scheme and the navigation block as they are. New bridge commands act on item ids, never on paths the page supplies.
+6. **The design is the design.** The island's look and animations come from Inlet. Changes to them should be deliberate, with before and after screenshots.
 
 ## Style
 

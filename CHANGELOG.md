@@ -4,6 +4,10 @@ What's new in each release, newest first. Written for people using Ledge, not fo
 
 ## Unreleased
 
+- **Live activities, like the Dynamic Island on iPhone.** While Apple Music or Spotify plays, the island shows the app and bars that dance to the music. Hover for the song, a progress bar, and play, pause and skip. (The first time you use a control, macOS asks whether Ledge may control the player.)
+- **Other apps can show what they're doing** in the island, like a build, an upload or a timer, with progress. See "Show your app in the island" in the README.
+- **On a screen without a notch**, like an external display on a Mac mini or Mac Studio, the island is now a floating pill in the middle of the menu bar that appears when something is live or on the Shelf.
+
 - Uses no CPU at all while it's waiting. Before, the Shelf kept redrawing animations you couldn't see, which cost a few percent of CPU and some battery all day.
 - Pictures of your files are ready before you open the Shelf, instead of filling in as it opens.
 - Opens a little sooner when you drag something towards the notch.

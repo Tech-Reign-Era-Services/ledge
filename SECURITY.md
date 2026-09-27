@@ -18,6 +18,7 @@ For example:
 - Ledge moving, deleting or changing a file (it should only ever point to files, never touch them)
 - A crafted file name, text or link on the Shelf that runs code, or reaches the island's page with more than the `window.shelf` functions in `web/bridge.js`
 - The island's page loading anything from outside the app, or navigating away from `ledge://app/shelf.html`
+- A live activity (from `ledge://activity` or the `com.techreignera.ledge.activity` notification) that gets past its limits, shows markup instead of text, or makes Ledge open a file or run a script
 - Ledge sending anything over the network (it makes no network requests at all)
 
 A bug where the Shelf doesn't open, or looks wrong, but loses nothing, is an ordinary [bug report](https://github.com/Tech-Reign-Era-Services/ledge/issues/new/choose).

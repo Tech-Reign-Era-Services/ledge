@@ -16,7 +16,7 @@ FLAGS=(-swift-version 5 -Osize -whole-module-optimization)
 
 test_() {
   mkdir -p .build
-  swiftc "${FLAGS[@]}" tests/main.swift Sources/ShelfStore.swift Sources/Layout.swift -o .build/tests
+  swiftc "${FLAGS[@]}" tests/main.swift Sources/ShelfStore.swift Sources/Layout.swift Sources/Activities.swift -o .build/tests
   .build/tests
 }
 
@@ -61,6 +61,14 @@ app() {
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSHumanReadableCopyright</key><string>© 2026 Tech Reign Era Services. MIT License.</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key><string>Ledge live activities</string>
+      <key>CFBundleURLSchemes</key><array><string>ledge</string></array>
+    </dict>
+  </array>
+  <key>NSAppleEventsUsageDescription</key><string>Ledge plays, pauses and skips songs in Music and Spotify when you use the controls in the island.</string>
   <key>CFBundleDocumentTypes</key>
   <array>
     <dict>

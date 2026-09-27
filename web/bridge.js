@@ -29,6 +29,8 @@
     closePreview: invoke('closePreview'),
     focus: invoke('focus'),
     icon: invoke('icon'),
+    activities: invoke('activities'),
+    activity: invoke('activity'), // (id, 'playpause' | 'next' | 'previous' | 'open' | 'dismiss')
     setState: send('setState'),
     drag: send('drag'),
     // Dropped files are read by the app itself (a web page never sees their paths).
@@ -36,5 +38,6 @@
     onState: listen('state'),
     onItems: listen('items'),
     onFlash: listen('flash'),
+    onActivities: listen('activities'),
   };
 })();

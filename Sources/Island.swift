@@ -93,6 +93,7 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
     static let debug = ProcessInfo.processInfo.environment["LEDGE_DEBUG"] != nil // LEDGE_DEBUG=1: log state changes and timings
 
     let store: ShelfStore
+    let activities: ActivityCenter
     var onChange: (() -> Void)? // the item count changed (for the menu bar)
     private(set) var state: IslandState = .closed
     private var panel: IslandPanel!
@@ -106,8 +107,9 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
     private let preview = Preview()
     private let textDir = FileManager.default.temporaryDirectory.appendingPathComponent("Ledge Shelf")
 
-    init(store: ShelfStore, webRoot: URL) {
+    init(store: ShelfStore, activities: ActivityCenter, webRoot: URL) {
         self.store = store
+        self.activities = activities
         super.init()
         let config = WKWebViewConfiguration()
         config.setURLSchemeHandler(AppScheme(root: webRoot), forURLScheme: "ledge")
@@ -164,17 +166,19 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
 
     private func measure() {
         notch = nil
-        if let s = screen, let l = s.auxiliaryTopLeftArea, let r = s.auxiliaryTopRightArea {
+        // LEDGE_NO_NOTCH=1: behave as on a screen without a notch (an external display), for development.
+        if let s = screen, ProcessInfo.processInfo.environment["LEDGE_NO_NOTCH"] == nil, let l = s.auxiliaryTopLeftArea, let r = s.auxiliaryTopRightArea {
             notch = Geometry.notch(screenWidth: s.frame.width, safeTop: s.safeAreaInsets.top, leftWidth: l.width, rightX: r.minX - s.frame.minX)
         }
         place()
     }
 
     func layout() -> ShelfLayout {
-        guard let s = screen else { return Geometry.layout(Display(x: 0, y: 0, width: 1440, height: 900, menuBar: 24), notch: nil, count: store.items.count) }
+        let live = activities.list.count
+        guard let s = screen else { return Geometry.layout(Display(x: 0, y: 0, width: 1440, height: 900, menuBar: 24), notch: nil, count: store.items.count, live: live > 0, activities: live) }
         let menuBar = max(s.frame.maxY - s.visibleFrame.maxY, NSStatusBar.system.thickness)
         let d = Display(x: Int(s.frame.minX), y: 0, width: Int(s.frame.width), height: Int(s.frame.height), menuBar: Int(menuBar.rounded()))
-        return Geometry.layout(d, notch: notch, count: store.items.count)
+        return Geometry.layout(d, notch: notch, count: store.items.count, live: live > 0, activities: live)
     }
 
     /// The pointer, with a top-left origin like the layout.
@@ -290,6 +294,13 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
     // ---------- items ----------
 
     /// After the Shelf's contents change: redraw it and resize the island.
+    /// Something live started, changed or ended: redraw it, and resize the island around it.
+    func activitiesChanged() {
+        if Island.debug { NSLog("live: %@", activities.list.map(\.id).joined(separator: ", ")) }
+        emit("activities", activities.json())
+        place()
+    }
+
     private func changed() {
         warmThumbnails()
         emit("items", itemsJSON())
@@ -353,12 +364,14 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
         snapshotForDevelopment()
     }
 
-    /// LEDGE_SNAPSHOT=out.png [LEDGE_STATE=open|peek|closed]: draw the page in that state to a PNG and quit.
+    /// LEDGE_SNAPSHOT=out.png [LEDGE_STATE=open|peek|closed] [LEDGE_SNAPSHOT_DELAY=seconds]: draw the page in that
+    /// state to a PNG and quit.
     private func snapshotForDevelopment() {
         let env = ProcessInfo.processInfo.environment
         guard let out = env["LEDGE_SNAPSHOT"] else { return }
         setState(IslandState(rawValue: env["LEDGE_STATE"] ?? "open") ?? .open)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        let delay = env["LEDGE_SNAPSHOT_DELAY"].flatMap(Double.init) ?? 1.5
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             self.web.takeSnapshot(with: nil) { image, error in
                 if let image, let tiff = image.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
                     try? png.write(to: URL(fileURLWithPath: out))
@@ -452,6 +465,11 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
             reply(nil, nil)
         case "drag":
             dragOut(existingFiles(strings(0)).compactMap(\.path))
+            reply(nil, nil)
+        case "activities":
+            reply(activities.json(), nil)
+        case "activity":
+            activities.perform(string(0), action: string(1))
             reply(nil, nil)
         case "log":
             NSLog("[page] %@", string(0))
