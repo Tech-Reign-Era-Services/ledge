@@ -2,7 +2,7 @@
 
 What's new in each release, newest first. Written for people using Ledge, not for developers.
 
-## Unreleased
+## 1.2.0
 
 - **The music bars move to the music itself.** Each bar follows part of the sound, bass to treble, straight from Apple Music or Spotify. macOS asks once to allow System Audio Recording; nothing is recorded or saved. Needs macOS 14.2 or later; otherwise the bars dance as before.
 - **The album artwork** shows in the island while a song plays.
