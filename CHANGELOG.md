@@ -2,7 +2,7 @@
 
 What's new in each release, newest first. Written for people using Ledge, not for developers.
 
-## Unreleased
+## 1.1.0
 
 - **Live activities, like the Dynamic Island on iPhone.** While Apple Music or Spotify plays, the island shows the app and bars that dance to the music. Hover for the song, a progress bar, and play, pause and skip. (The first time you use a control, macOS asks whether Ledge may control the player.)
 - **Other apps can show what they're doing** in the island, like a build, an upload or a timer, with progress. See "Show your app in the island" in the README.
