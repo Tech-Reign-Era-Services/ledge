@@ -157,6 +157,20 @@ test("without a notch, something live or on the Shelf becomes a floating pill") 
     eq(n.insetClosed, 0)
 }
 
+test("the pill follows its settings") {
+    var style = PillStyle()
+    style.idleWidth = 140; style.activeWidth = 260; style.height = 22; style.gap = 1; style.openWidth = 800
+    let idle = Geometry.layout(external, notch: nil, count: 0, style: style)
+    eq(idle.islandClosed, Size(width: 140, height: 22))
+    eq(idle.insetClosed, 1)
+    eq(Geometry.layout(external, notch: nil, count: 1, style: style).islandClosed.width, 260)
+    eq(idle.islandOpen.width, 800)
+    style.alwaysShow = false
+    check(Geometry.layout(external, notch: nil, count: 0, style: style).islandClosed.height < 10, "set not to show: the thin strip")
+    eq(Geometry.layout(external, notch: nil, count: 1, style: style).islandClosed.width, 260, "…until there's something to show")
+    eq(Geometry.layout(mbp, notch: mbpNotch, count: 0, style: style).islandClosed, Size(width: 209, height: 38), "a notch is left as it is")
+}
+
 test("each live activity adds a row to the open island, up to two") {
     let base = Geometry.layout(mbp, notch: mbpNotch, count: 1).islandOpen.height
     eq(Geometry.layout(mbp, notch: mbpNotch, count: 1, live: true, activities: 1).islandOpen.height, base + Geometry.row)

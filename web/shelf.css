@@ -1,8 +1,8 @@
 /* The Shelf: a black island that grows out of the notch. It is always dark, like the notch it comes from. */
 :root {
   --ink: #f5f5f7;
-  --ink-2: rgba(245, 245, 247, 0.64);
-  --ink-3: rgba(245, 245, 247, 0.4);
+  --ink-2: rgba(245, 245, 247, 0.84);
+  --ink-3: rgba(245, 245, 247, 0.64);
   --glass: rgba(255, 255, 255, 0.08);
   --glass-2: rgba(255, 255, 255, 0.14);
   --accent: #7b96ff;
@@ -210,15 +210,15 @@ body.is-open .panel {
   border-radius: 12px;
   transition: background 0.15s, color 0.15s, transform 0.2s var(--bouncy);
 }
-.act .icon { color: var(--ink-2); transition: color 0.15s; }
+.act .icon { color: var(--ink); transition: color 0.15s; }
 .act:hover { background: var(--glass-2); }
 .act:active { transform: scale(0.94); }
-.act:disabled { opacity: 0.3; background: var(--glass); transform: none; }
+.act:disabled { opacity: 0.6; background: var(--glass); transform: none; }
 .act:focus { outline: none; }
 .act:focus-visible { box-shadow: 0 0 0 2px rgba(123, 150, 255, 0.75); }
 .act.done { background: rgba(60, 207, 122, 0.18); color: var(--good); }
 .act.done .icon { color: var(--good); animation: pop 0.45s var(--bouncy); }
-.act.quiet { background: transparent; color: var(--ink-2); }
+.act.quiet { background: transparent; color: var(--ink); }
 .act.quiet:hover { background: var(--glass); color: var(--ink); }
 
 /* The row of items. Its edges fade when there's more to scroll to. */

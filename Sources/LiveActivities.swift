@@ -16,6 +16,9 @@ final class ActivityCenter {
     ]
 
     private var artwork: (track: String, url: String?) = ("", nil) // the playing track's album artwork, once fetched
+    private var pending: Activity? // a new song, waiting a moment for its artwork
+    private var pendingWork: DispatchWorkItem?
+    static let artworkWait = 0.6
 
     func start() {
         let center = DistributedNotificationCenter.default()
@@ -57,22 +60,43 @@ final class ActivityCenter {
 
     private func music(_ info: [String: Any], app: String, bundleID: String) {
         let now = ActivityCenter.now()
-        if var a = Activities.music(info, app: app, bundleID: bundleID, now: now) {
-            let track = "\(bundleID)|\(a.title)|\(a.subtitle)"
-            if artwork.track == track { a.art = artwork.url }
-            else {
-                artwork = (track, nil)
-                Artwork.fetch(bundleID: bundleID) { [weak self] url in
-                    guard let self, let url, self.artwork.track == track else { return }
-                    self.artwork.url = url
-                    guard var m = self.list.first(where: { $0.id == "music" }), m.source == app else { return }
-                    m.art = url
-                    self.apply(.upsert(m))
-                }
+        guard var a = Activities.music(info, app: app, bundleID: bundleID, now: now) else {
+            if list.first(where: { $0.id == "music" })?.source == app || pending?.source == app { // only the player that was showing can end it
+                pending = nil; pendingWork?.cancel()
+                apply(.end("music"))
             }
-            apply(.upsert(a))
+            return
         }
-        else if list.first(where: { $0.id == "music" })?.source == app { apply(.end("music")) } // only the player that was showing can end it
+        let track = "\(bundleID)|\(a.title)|\(a.subtitle)"
+        if artwork.track == track { a.art = artwork.url }
+        // A new song: hold it until its artwork arrives (or a moment has passed), so the island changes once, not twice.
+        if artwork.track != track {
+            artwork = (track, nil)
+            pending = a
+            pendingWork?.cancel()
+            let work = DispatchWorkItem { [weak self] in self?.showPending() }
+            pendingWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + ActivityCenter.artworkWait, execute: work)
+            guard Prefs.showArtwork else { return showPending() }
+            Artwork.fetch(bundleID: bundleID) { [weak self] url in
+                guard let self, self.artwork.track == track else { return }
+                self.artwork.url = url
+                if var p = self.pending { p.art = url; self.pending = p; self.showPending() }
+                else if let url, var m = self.list.first(where: { $0.id == "music" }), m.source == app { m.art = url; self.apply(.upsert(m)) }
+            }
+            return
+        }
+        if pending != nil { pending = a; return } // the same song again, while its artwork is on the way
+        // Players announce each change two or three times over: only show what's actually different.
+        if let m = list.first(where: { $0.id == "music" }), Activities.sameMusic(m, a, now: now) { return }
+        apply(.upsert(a))
+    }
+
+    private func showPending() {
+        pendingWork?.cancel(); pendingWork = nil
+        guard let p = pending else { return }
+        pending = nil
+        apply(.upsert(p))
     }
 
     private func apply(_ r: ActivityRequest) {

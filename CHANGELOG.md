@@ -7,6 +7,9 @@ What's new in each release, newest first. Written for people using Ledge, not fo
 - **The music bars move to the music itself.** Each bar follows part of the sound, bass to treble, straight from Apple Music or Spotify. macOS asks once to allow System Audio Recording; nothing is recorded or saved. Needs macOS 14.2 or later; otherwise the bars dance as before.
 - **The album artwork** shows in the island while a song plays.
 - **Music that was already playing** when Ledge starts now shows straight away.
+- **Settings** (menu bar icon → Settings…, or ⌘,): the pill's widths, height and gap from the top, the open island's width, whether it opens on hover and how soon, the album artwork, the music bars and their colour. The pill follows each change as you make it.
+- **Play, pause and a new song change the island once**, the way the iPhone does, instead of redrawing it two or three times.
+- **Brighter buttons**: Copy all, Clear and the other text in the Shelf are white instead of grey.
 - **On a screen without a notch**, the pill is always there, small when there's nothing to show, so you can always find it and drop onto it.
 
 ## 1.1.0

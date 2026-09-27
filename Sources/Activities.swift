@@ -116,6 +116,15 @@ enum Activities {
         return a
     }
 
+    /// The same song, in the same state, where the page would already put it: nothing to redraw.
+    static func sameMusic(_ old: Activity, _ new: Activity, now: Double) -> Bool {
+        guard old.source == new.source, old.title == new.title, old.subtitle == new.subtitle, old.playing == new.playing,
+              old.duration == new.duration else { return false }
+        guard let e0 = old.elapsed, let e1 = new.elapsed else { return old.elapsed == new.elapsed }
+        let expected = e0 + (old.playing == true ? (now - old.at) / 1000 : 0)
+        return abs(expected - e1) < 1.5 // no seek
+    }
+
     private static func number(_ v: Any?) -> Double? {
         if let n = v as? NSNumber { return n.doubleValue }
         if let s = v as? String { return Double(s) }
