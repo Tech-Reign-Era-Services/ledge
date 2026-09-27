@@ -31,8 +31,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.menu = menu
         refreshIcon()
 
-        // First launch: start with the Mac, as a notch utility is expected to. Easy to turn off from the menu.
-        if !defaults.bool(forKey: "launched") {
+        // First launch of the installed app: start with the Mac, as a notch utility is expected to. Easy to turn off
+        // from the menu. A build run from anywhere else (dist/ while developing) leaves login items alone.
+        if !defaults.bool(forKey: "launched"), Bundle.main.bundlePath.hasPrefix("/Applications/") {
             defaults.set(true, forKey: "launched")
             try? SMAppService.mainApp.register()
         }

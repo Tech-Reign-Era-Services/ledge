@@ -89,7 +89,8 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
     static let pageURL = URL(string: "ledge://app/shelf.html")!
     static let collapse = 0.32 // a little longer than the island's 0.3s close in shelf.css
     static let keepKeysFor = 0.7 // how long Quick Look may try to take the keyboard after opening
-    static let debug = ProcessInfo.processInfo.environment["LEDGE_DEBUG"] != nil // LEDGE_DEBUG=1: log state changes
+    private let started = CACurrentMediaTime()
+    static let debug = ProcessInfo.processInfo.environment["LEDGE_DEBUG"] != nil // LEDGE_DEBUG=1: log state changes and timings
 
     let store: ShelfStore
     var onChange: (() -> Void)? // the item count changed (for the menu bar)
@@ -112,6 +113,7 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
         config.setURLSchemeHandler(AppScheme(root: webRoot), forURLScheme: "ledge")
         config.userContentController.addScriptMessageHandler(WeakHandler(self), contentWorld: .page, name: "ledge")
         config.suppressesIncrementalRendering = true
+        config.websiteDataStore = .nonPersistent() // the page keeps nothing: no caches or storage written to disk
         web = IslandWebView(frame: .zero, configuration: config)
         web.setValue(false, forKey: "drawsBackground") // transparent: only the island is drawn
         web.navigationDelegate = self
@@ -289,9 +291,14 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
 
     /// After the Shelf's contents change: redraw it and resize the island.
     private func changed() {
+        warmThumbnails()
         emit("items", itemsJSON())
         place()
         onChange?()
+    }
+
+    private func warmThumbnails() {
+        Thumbnails.warm(store.items.filter { $0.kind == "file" }.compactMap(\.path))
     }
 
     private func itemsJSON() -> [[String: Any]] {
@@ -339,8 +346,10 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         ready = true
+        if Island.debug { NSLog("page ready in %.0f ms", (CACurrentMediaTime() - started) * 1000) }
         place()
         panel.orderFrontRegardless()
+        warmThumbnails()
         snapshotForDevelopment()
     }
 
@@ -433,7 +442,11 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
             reply(nil, nil)
         case "icon":
             guard let it = store.get([string(0)]).first, it.kind == "file", let p = it.path else { return reply(nil, nil) }
-            Thumbnails.dataURL(for: p) { reply($0, nil) }
+            let tIcon = CACurrentMediaTime()
+            Thumbnails.dataURL(for: p) { url in
+                if Island.debug { NSLog("icon for %@ in %.1f ms", (p as NSString).lastPathComponent, (CACurrentMediaTime() - tIcon) * 1000) }
+                reply(url, nil)
+            }
         case "setState":
             if let s = IslandState(rawValue: string(0)) { setState(s) }
             reply(nil, nil)

@@ -366,8 +366,9 @@ body.dragging .head-side.end { opacity: 0.3; }
   align-items: center;
   justify-content: center;
   color: var(--ink-3);
-  animation: float 3.2s ease-in-out infinite;
 }
+/* Endless animations run only while they can be seen: a hidden one still redraws the page every frame. */
+body.is-open .empty-art { animation: float 3.2s ease-in-out infinite; }
 @keyframes float { 50% { transform: translateY(-4px); } }
 .empty b { color: var(--ink); font-weight: 500; font-size: 12.5px; }
 .empty span { color: var(--ink-3); font-size: 11px; }
@@ -423,8 +424,8 @@ body.dragging.is-open .drop { opacity: 1; transform: translateX(-50%); }
   stroke: var(--accent);
   stroke-width: 1.5;
   stroke-dasharray: 7 6;
-  animation: march 0.9s linear infinite;
 }
+body.dragging.is-open .drop-ring rect { animation: march 0.9s linear infinite; }
 @keyframes march { to { stroke-dashoffset: -13; } }
 .drop-label { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
 .drop-icon {
@@ -437,8 +438,8 @@ body.dragging.is-open .drop { opacity: 1; transform: translateX(-50%); }
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 18px rgba(97, 130, 255, 0.45);
-  animation: bob 1.3s ease-in-out infinite;
 }
+body.dragging.is-open .drop-icon { animation: bob 1.3s ease-in-out infinite; }
 @keyframes bob { 50% { transform: translateY(4px); } }
 
 @media (prefers-reduced-motion: reduce) {

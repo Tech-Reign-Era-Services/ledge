@@ -2,6 +2,12 @@
 
 What's new in each release, newest first. Written for people using Ledge, not for developers.
 
+## Unreleased
+
+- Uses no CPU at all while it's waiting. Before, the Shelf kept redrawing animations you couldn't see, which cost a few percent of CPU and some battery all day.
+- Pictures of your files are ready before you open the Shelf, instead of filling in as it opens.
+- Opens a little sooner when you drag something towards the notch.
+
 ## 1.0.0
 
 The Shelf from [Inlet](https://github.com/Tech-Reign-Era-Services/inlet), as its own small app. It looks and works just the same.
