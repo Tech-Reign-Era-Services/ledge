@@ -213,7 +213,7 @@ body.is-open .panel {
 .act .icon { color: var(--ink); transition: color 0.15s; }
 .act:hover { background: var(--glass-2); }
 .act:active { transform: scale(0.94); }
-.act:disabled { opacity: 0.6; background: var(--glass); transform: none; }
+.act:disabled { opacity: 0.88; background: var(--glass); transform: none; }
 .act:focus { outline: none; }
 .act:focus-visible { box-shadow: 0 0 0 2px rgba(123, 150, 255, 0.75); }
 .act.done { background: rgba(60, 207, 122, 0.18); color: var(--good); }
