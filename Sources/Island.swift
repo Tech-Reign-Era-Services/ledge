@@ -101,9 +101,11 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
     private var notch: Notch?
     private var ready = false
     private var shrinkWork: DispatchWorkItem?
+    private var prefsWork: DispatchWorkItem?
     private var watchTimer: Timer?
     private var keysTimer: Timer?
     private let drags = DragWatch()
+    private let levels = AudioLevels()
     private let preview = Preview()
     private let textDir = FileManager.default.temporaryDirectory.appendingPathComponent("Ledge Shelf")
 
@@ -150,6 +152,11 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
             let p = self.cursor()
             if Geometry.nearShelf(x: p.x, y: p.y, self.layout()) { self.setState(.peek) }
         }
+        levels.onLevels = { [weak self] lv in
+            guard let self, self.state == .closed || lv == nil else { return } // the bars only show on the closed island
+            self.emit("levels", lv.map { $0.map { ($0 * 100).rounded() / 100 } } as Any? ?? NSNull())
+        }
+        NotificationCenter.default.addObserver(self, selector: #selector(prefsChanged), name: UserDefaults.didChangeNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(screensChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
 
         measure()
@@ -160,6 +167,25 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
     // ---------- where it sits ----------
 
     private var screen: NSScreen? { NSScreen.screens.first } // the one with the menu bar
+
+    /// Something changed in Settings: follow it straight away (a slider sends many changes, so once per frame at most).
+    @objc private func prefsChanged() {
+        guard prefsWork == nil else { return }
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.prefsWork = nil
+            self.emit("prefs", Prefs.page)
+            self.followMusic()
+            self.place()
+        }
+        prefsWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1 / 60, execute: work)
+    }
+
+    private func followMusic() {
+        let music = activities.list.first { $0.kind == "music" && $0.playing == true }
+        levels.follow(Prefs.realBars ? music?.bundleID : nil)
+    }
 
     /// Read the notch again (screens changed), then reposition.
     @objc private func screensChanged() { measure() }
@@ -175,10 +201,10 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
 
     func layout() -> ShelfLayout {
         let live = activities.list.count
-        guard let s = screen else { return Geometry.layout(Display(x: 0, y: 0, width: 1440, height: 900, menuBar: 24), notch: nil, count: store.items.count, live: live > 0, activities: live) }
+        guard let s = screen else { return Geometry.layout(Display(x: 0, y: 0, width: 1440, height: 900, menuBar: 24), notch: nil, count: store.items.count, live: live > 0, activities: live, style: Prefs.pillStyle) }
         let menuBar = max(s.frame.maxY - s.visibleFrame.maxY, NSStatusBar.system.thickness)
         let d = Display(x: Int(s.frame.minX), y: 0, width: Int(s.frame.width), height: Int(s.frame.height), menuBar: Int(menuBar.rounded()))
-        return Geometry.layout(d, notch: notch, count: store.items.count, live: live > 0, activities: live)
+        return Geometry.layout(d, notch: notch, count: store.items.count, live: live > 0, activities: live, style: Prefs.pillStyle)
     }
 
     /// The pointer, with a top-left origin like the layout.
@@ -298,6 +324,7 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
     func activitiesChanged() {
         if Island.debug { NSLog("live: %@", activities.list.map(\.id).joined(separator: ", ")) }
         emit("activities", activities.json())
+        followMusic()
         place()
     }
 
@@ -358,6 +385,7 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         ready = true
         if Island.debug { NSLog("page ready in %.0f ms", (CACurrentMediaTime() - started) * 1000) }
+        emit("prefs", Prefs.page)
         place()
         panel.orderFrontRegardless()
         warmThumbnails()
@@ -461,7 +489,7 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
                 reply(url, nil)
             }
         case "setState":
-            if let s = IslandState(rawValue: string(0)) { setState(s) }
+            if let s = IslandState(rawValue: string(0)) { setState(s, focus: s == .open) } // opened by a click or a key: it takes the keyboard
             reply(nil, nil)
         case "drag":
             dragOut(existingFiles(strings(0)).compactMap(\.path))

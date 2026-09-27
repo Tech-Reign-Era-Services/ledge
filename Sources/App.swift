@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var hotKey: HotKey?
     private var statusItem: NSStatusItem!
     private let menu = NSMenu()
+    private let settings = SettingsWindow()
     private let defaults = UserDefaults.standard
 
     /// LEDGE_DATA_DIR=/tmp/ledge-dev keeps a development build's Shelf apart from the installed app's.
@@ -19,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Ledge")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Prefs.register()
         importInletShelf()
         let store = ShelfStore(dir: AppDelegate.dataDir)
         let web = Bundle.main.resourceURL!.appendingPathComponent("web")
@@ -50,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Files opened with Ledge (`open -a Ledge file…`, or dropped on its icon) go on the Shelf.
     /// ledge://activity?… and ledge://activity/end?… start, update and end another app's live activity.
     func application(_ sender: NSApplication, open urls: [URL]) {
+        if urls.contains(where: { $0.scheme == "ledge" && $0.host == "settings" }) { settings.show() } // ledge://settings
         for url in urls where url.scheme == "ledge" && url.host == "activity" {
             let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
             let fields = items.reduce(into: [String: String]()) { d, q in if let v = q.value { d[q.name] = v } }
@@ -75,6 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let login = NSMenuItem(title: "Open at Login", action: #selector(toggleLogin), keyEquivalent: "")
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
+        menu.addItem(NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ","))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "About Ledge", action: #selector(about), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Quit Ledge", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -82,6 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func showShelf() { island.show() }
+    @objc private func showSettings() { settings.show() }
     @objc private func clearShelf() { island.clear() }
 
     @objc private func toggleLogin() {

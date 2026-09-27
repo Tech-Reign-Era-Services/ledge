@@ -20,6 +20,7 @@ struct Activity: Equatable {
     var playing: Bool? // music
     var elapsed: Double? // music: seconds into the track at `at`
     var duration: Double? // music: seconds
+    var art: String? // music: the album artwork, a data URL fetched by the app
     var at: Double = 0 // when this was last updated, ms since 1970
     var expires: Double = .infinity // ms since 1970
 
@@ -35,6 +36,7 @@ struct Activity: Equatable {
         if let playing { d["playing"] = playing }
         if let elapsed { d["elapsed"] = elapsed }
         if let duration { d["duration"] = duration }
+        if let art { d["art"] = art }
         return d
     }
 }
@@ -112,6 +114,15 @@ enum Activities {
         a.at = now
         a.expires = a.playing == true ? .infinity : now + pausedTTL * 1000
         return a
+    }
+
+    /// The same song, in the same state, where the page would already put it: nothing to redraw.
+    static func sameMusic(_ old: Activity, _ new: Activity, now: Double) -> Bool {
+        guard old.source == new.source, old.title == new.title, old.subtitle == new.subtitle, old.playing == new.playing,
+              old.duration == new.duration else { return false }
+        guard let e0 = old.elapsed, let e1 = new.elapsed else { return old.elapsed == new.elapsed }
+        let expected = e0 + (old.playing == true ? (now - old.at) / 1000 : 0)
+        return abs(expected - e1) < 1.5 // no seek
     }
 
     private static func number(_ v: Any?) -> Double? {

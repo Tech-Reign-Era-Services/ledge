@@ -39,5 +39,7 @@
     onItems: listen('items'),
     onFlash: listen('flash'),
     onActivities: listen('activities'),
+    onPrefs: listen('prefs'), // from Settings: { hoverOpen, hoverDelay, barColor, showArtwork }
+    onLevels: listen('levels'), // the music bars: four levels 0–1, bass to treble, or null to animate by themselves
   };
 })();

@@ -88,13 +88,24 @@ function enterItems() {
 
 const setState = (state) => { if (state !== S.state) api.setState(state); };
 
+// From Settings.
+S.prefs = { hoverOpen: true, hoverDelay: 140, barColor: '#8ea2ff', showArtwork: true };
+api.onPrefs((p) => {
+  const artChanged = p.showArtwork !== S.prefs.showArtwork;
+  S.prefs = p;
+  document.documentElement.style.setProperty('--live', p.barColor);
+  if (artChanged) { renderLiveEars(false); renderNow(); }
+});
+
 // Hover: peek after a moment (so passing through the menu bar doesn't open it), close soon after leaving.
 const island = $('island');
 island.addEventListener('mouseenter', () => {
   S.hover = true;
   cancel('close');
-  if (S.state === 'closed') later('peek', 140, () => S.hover && setState('peek'));
+  if (S.state === 'closed' && S.prefs.hoverOpen) later('peek', S.prefs.hoverDelay, () => S.hover && setState('peek'));
 });
+// Set not to open on hover: a click opens it.
+island.addEventListener('mousedown', () => { if (S.state === 'closed') setState('open'); });
 island.addEventListener('mouseleave', () => {
   S.hover = false;
   cancel('peek');
@@ -463,10 +474,24 @@ function setActivities(list) {
   renderNow();
 }
 
+/** An image already on screen is reused, not made again: a new one would blink while it decodes. */
+const pictures = new Map();
+function picture(src, size, cls) {
+  const key = `${size}|${src}`;
+  let img = pictures.get(key);
+  if (!img) {
+    img = h('img', { class: cls, src, alt: '', draggable: 'false' });
+    if (pictures.size > 12) pictures.delete(pictures.keys().next().value);
+    pictures.set(key, img);
+  }
+  return img;
+}
+
 /** The activity's picture: an app icon or symbol the app drew, or an emoji. */
 function liveArt(a, size) {
   if (a.emoji) return h('span', { class: 'live-emoji', style: `font-size:${Math.round(size * 0.72)}px` }, a.emoji);
-  if (a.icon) return h('img', { src: a.icon, alt: '', draggable: 'false' });
+  if (a.art && S.prefs.showArtwork) return picture(a.art, size, 'art'); // the album artwork
+  if (a.icon) return picture(a.icon, size, '');
   return icon('dots', Math.round(size * 0.6));
 }
 
@@ -476,6 +501,14 @@ function trailFor(a) {
   if (a.progress != null) return ring(a.progress, a.tint);
   if (a.trailing) return h('span', { class: 'live-text' }, a.trailing);
   return null;
+}
+
+/** The music bars, moving to the music itself: levels from the app, or null to let them animate by themselves. */
+function setLevels(levels) {
+  body.classList.toggle('eq-real', !!levels);
+  document.querySelectorAll('.eq i').forEach((el, i) => {
+    el.style.transform = levels ? `scaleY(${(0.2 + 0.8 * (levels[i % levels.length] || 0)).toFixed(2)})` : '';
+  });
 }
 
 function ring(progress, tint) {
@@ -497,9 +530,16 @@ function ring(progress, tint) {
 
 function renderLiveEars(bump) {
   const a = S.live[0];
-  $('live-icon').replaceChildren(...(a ? [liveArt(a, 20)] : []));
-  const trail = a && trailFor(a);
-  $('live-trail').replaceChildren(...(trail ? [trail] : []));
+  const art = a ? liveArt(a, 20) : null;
+  if ($('live-icon').firstChild !== art || !art) $('live-icon').replaceChildren(...(art ? [art] : []));
+  $('live-icon').classList.toggle('art', !!(a?.art && S.prefs.showArtwork));
+  // Music's bars stay where they are (and keep moving with the music); play and pause only switch them on and off.
+  const eq = $('live-trail').querySelector('.eq');
+  if (a?.kind === 'music' && eq) eq.classList.toggle('on', !!a.playing);
+  else {
+    const trail = a && trailFor(a);
+    $('live-trail').replaceChildren(...(trail ? [trail] : []));
+  }
   if (bump && S.shown) replay($('live-ears'), 'bump');
 }
 
@@ -557,6 +597,7 @@ $('drop-icon').append(icon('down', 18));
 api.onState(applyState);
 api.onItems(setItems);
 api.onActivities(setActivities);
+api.onLevels(setLevels);
 api.activities().then(setActivities);
 api.onFlash((ms) => later('close', ms, () => !S.hover && S.state === 'peek' && setState('closed')));
 api.items().then(setItems);

@@ -119,12 +119,14 @@ test("sits on the notch and grows around it") {
     eq((full.islandOpen.width - 209) % 2, 0, "the island centres exactly")
 }
 
-test("without a notch it is a thin strip in the middle of the menu bar") {
+test("without a notch it is a small pill in the middle of the menu bar, even with nothing to show") {
     let L = Geometry.layout(external, notch: nil, count: 0)
     eq(L.hasNotch, false)
     eq(L.closed.y, -300)
     eq(Double(L.closed.x) + Double(L.closed.width) / 2, -1280)
-    check(L.closed.height < 10, "never covers menu bar items")
+    check(L.closed.height <= external.menuBar, "stays within the menu bar")
+    check(L.islandClosed.height >= 18 && L.insetClosed > 0, "a visible pill, floating clear of the top edge")
+    check(L.islandClosed.width < Geometry.pillWidth, "smaller than the pill that shows something")
     eq(Geometry.layout(external, notch: mbpNotch, count: 0).hasNotch, false, "a notch measured on another screen is ignored")
 }
 
@@ -148,11 +150,25 @@ test("without a notch, something live or on the Shelf becomes a floating pill") 
     eq(L.closed.height, L.islandClosed.height + L.insetClosed)
     eq(Double(L.closed.x) + Double(L.closed.width) / 2, -1280, "centred")
     eq(Geometry.layout(external, notch: nil, count: 2).islandClosed, L.islandClosed, "Shelf items show the same pill")
-    check(Geometry.layout(external, notch: nil, count: 0).islandClosed.height < 10, "nothing to show: back to the thin strip")
+    eq(Geometry.layout(external, notch: nil, count: 0).islandClosed.height, L.islandClosed.height, "nothing to show: the same height, just narrower")
     eq(L.insetOpen, L.insetClosed, "opens out of the pill")
     let n = Geometry.layout(mbp, notch: mbpNotch, count: 0, live: true)
     eq(n.islandClosed.width, 209 + Geometry.ear * 2, "with a notch, a live activity sits beside it")
     eq(n.insetClosed, 0)
+}
+
+test("the pill follows its settings") {
+    var style = PillStyle()
+    style.idleWidth = 140; style.activeWidth = 260; style.height = 22; style.gap = 1; style.openWidth = 800
+    let idle = Geometry.layout(external, notch: nil, count: 0, style: style)
+    eq(idle.islandClosed, Size(width: 140, height: 22))
+    eq(idle.insetClosed, 1)
+    eq(Geometry.layout(external, notch: nil, count: 1, style: style).islandClosed.width, 260)
+    eq(idle.islandOpen.width, 800)
+    style.alwaysShow = false
+    check(Geometry.layout(external, notch: nil, count: 0, style: style).islandClosed.height < 10, "set not to show: the thin strip")
+    eq(Geometry.layout(external, notch: nil, count: 1, style: style).islandClosed.width, 260, "…until there's something to show")
+    eq(Geometry.layout(mbp, notch: mbpNotch, count: 0, style: style).islandClosed, Size(width: 209, height: 38), "a notch is left as it is")
 }
 
 test("each live activity adds a row to the open island, up to two") {

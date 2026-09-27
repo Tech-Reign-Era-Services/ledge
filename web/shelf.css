@@ -1,8 +1,8 @@
 /* The Shelf: a black island that grows out of the notch. It is always dark, like the notch it comes from. */
 :root {
   --ink: #f5f5f7;
-  --ink-2: rgba(245, 245, 247, 0.64);
-  --ink-3: rgba(245, 245, 247, 0.4);
+  --ink-2: rgba(245, 245, 247, 0.84);
+  --ink-3: rgba(245, 245, 247, 0.64);
   --glass: rgba(255, 255, 255, 0.08);
   --glass-2: rgba(255, 255, 255, 0.14);
   --accent: #7b96ff;
@@ -98,15 +98,12 @@ body:not(.has-items):not(.live):not(.is-open) .shoulder { opacity: 0; }
 .clip.gulp { animation: gulp 0.5s var(--bouncy); }
 @keyframes gulp { 35% { transform: scale(1.025, 1.06); } }
 
-/* No notch: a thin strip at the top edge. Nearly invisible, but it still catches the pointer and drops. */
-body.flat:not(.is-open) .clip { background: rgba(0, 0, 0, 0.01); border-radius: 0 0 6px 6px; }
+/* No notch: a floating pill in the middle of the menu bar, always there, like the iPhone's Dynamic Island. Small when
+   there's nothing to show, wider when something is live or on the Shelf. Open, it grows out of the pill with every
+   corner rounded. */
+body.flat:not(.is-open) .clip { background: #000; border-radius: calc(var(--h) / 2); box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.14), 0 2px 8px rgba(0, 0, 0, 0.22); }
 body.flat .shoulder { display: none; }
 body.flat:not(.has-items):not(.live) .ears { display: none; }
-
-/* No notch, but something to show: a floating pill in the middle of the menu bar, like the iPhone's Dynamic Island.
-   Open, it grows out of the pill with every corner rounded. */
-body.flat.has-items:not(.is-open) .clip,
-body.flat.live:not(.is-open) .clip { background: #000; border-radius: calc(var(--h) / 2); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22); }
 body.flat.is-open .clip { border-radius: 30px; }
 body.flat .ears { padding: 0 8px 0 5px; }
 body.flat .ear-thumb, body.flat .ear-thumb img { width: 16px; height: 16px; border-radius: 50%; }
@@ -213,15 +210,15 @@ body.is-open .panel {
   border-radius: 12px;
   transition: background 0.15s, color 0.15s, transform 0.2s var(--bouncy);
 }
-.act .icon { color: var(--ink-2); transition: color 0.15s; }
+.act .icon { color: var(--ink); transition: color 0.15s; }
 .act:hover { background: var(--glass-2); }
 .act:active { transform: scale(0.94); }
-.act:disabled { opacity: 0.3; background: var(--glass); transform: none; }
+.act:disabled { opacity: 0.88; background: var(--glass); transform: none; }
 .act:focus { outline: none; }
 .act:focus-visible { box-shadow: 0 0 0 2px rgba(123, 150, 255, 0.75); }
 .act.done { background: rgba(60, 207, 122, 0.18); color: var(--good); }
 .act.done .icon { color: var(--good); animation: pop 0.45s var(--bouncy); }
-.act.quiet { background: transparent; color: var(--ink-2); }
+.act.quiet { background: transparent; color: var(--ink); }
 .act.quiet:hover { background: var(--glass); color: var(--ink); }
 
 /* The row of items. Its edges fade when there's more to scroll to. */
@@ -475,6 +472,8 @@ body.live-playing:not(.is-open) .eq.on i { animation: eq 0.8s ease-in-out infini
 .eq.on i:nth-child(2) { animation-duration: 0.55s; animation-delay: -0.2s; }
 .eq.on i:nth-child(3) { animation-duration: 0.95s; animation-delay: -0.5s; }
 .eq.on i:nth-child(4) { animation-duration: 0.7s; animation-delay: -0.1s; }
+/* Moving to the music itself (levels from the app): no animation, just a short glide between readings. */
+body.eq-real.live-playing:not(.is-open) .eq.on i { animation: none; transition: transform 0.06s linear; }
 @keyframes eq { from { transform: scaleY(0.25); } to { transform: scaleY(1); } }
 .ring { width: 18px; height: 18px; transform: rotate(-90deg); }
 .ring circle { fill: none; stroke-width: 2.6; }
@@ -504,6 +503,11 @@ body.flat .ring { width: 16px; height: 16px; }
 .now-art { width: 40px; height: 40px; flex: none; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--ink-2); }
 .now-art img { width: 40px; height: 40px; object-fit: contain; }
 .now-art.emoji { background: var(--glass); }
+.now-art img.art { object-fit: cover; }
+/* The album artwork: a rounded square, like the iPhone's, instead of the player's icon. */
+.live-icon.art { border-radius: 5px; overflow: hidden; }
+.live-icon img.art { object-fit: cover; border-radius: 5px; }
+body.flat .live-icon.art, body.flat .live-icon.art img { width: 18px; height: 18px; border-radius: 5px; }
 .now-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .now-text b { font-weight: 600; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .now-text span { font-size: 11px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
