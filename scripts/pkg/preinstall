@@ -1,0 +1,4 @@
+#!/bin/sh
+# Quit a running Ledge so the new one replaces it cleanly. Never fail the installation because of this.
+/usr/bin/pkill -x Ledge >/dev/null 2>&1
+exit 0
