@@ -11,7 +11,7 @@ import Quartz
 /// Notices when something is being dragged anywhere on the Mac, so the Shelf can open before the pointer
 /// reaches it (the closed Shelf is only as big as the notch). A drag is: the left button is down and the drag
 /// pasteboard has changed since it went down (dragging a window or selecting text doesn't touch it).
-/// Nothing runs while the button is up; while it's down, a light 50 ms check.
+/// Nothing runs while the button is up; while it's down, a light 50 ms check, then every frame during a drag.
 final class DragWatch {
     var onMove: (() -> Void)? // every tick while something is being dragged
     private var monitor: Any?
@@ -36,12 +36,22 @@ final class DragWatch {
     private func pressed(fresh: Bool) {
         if fresh || timer == nil { base = pasteboard.changeCount }
         guard timer == nil else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in self?.tick() }
+        schedule(0.05)
+    }
+
+    /// 50 ms while the button is merely down; every frame once something is really being dragged,
+    /// so the Shelf opens the moment the pointer comes near.
+    private func schedule(_ interval: TimeInterval) {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in self?.tick() }
+        timer?.tolerance = interval / 10
     }
 
     private func tick() {
         guard NSEvent.pressedMouseButtons & 1 == 1 else { timer?.invalidate(); timer = nil; return }
-        if pasteboard.changeCount != base { onMove?() }
+        guard pasteboard.changeCount != base else { return }
+        if let t = timer, t.timeInterval > 0.02 { schedule(1.0 / 60) }
+        onMove?()
     }
 }
 
@@ -82,25 +92,40 @@ final class HotKey {
 /// A Quick Look thumbnail (images, PDFs, videos, and full-size folder and document icons), or the Finder icon,
 /// as a PNG data URL for the page.
 enum Thumbnails {
-    private static var cache: [String: String] = [:]
-    private static var images: [String: NSImage] = [:]
+    private static var cache: [String: String] = [:] // key (path + modification date) → data URL
+    private static var images: [String: NSImage] = [:] // path → the image, for dragging
+    private static var waiting: [String: [(String?) -> Void]] = [:] // requests already being drawn
+
+    /// A changed file gets a fresh thumbnail.
+    private static func key(_ path: String) -> String {
+        let modified = (try? FileManager.default.attributesOfItem(atPath: path)[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
+        return "\(modified)|\(path)"
+    }
 
     static func dataURL(for path: String, size: CGFloat = 64, done: @escaping (String?) -> Void) {
-        if let hit = cache[path] { return done(hit) }
+        let key = key(path)
+        if let hit = cache[key] { return done(hit) }
+        // The closed island's newest item and its tile ask at the same moment: draw it once.
+        if waiting[key] != nil { waiting[key]!.append(done); return }
+        waiting[key] = [done]
         let url = URL(fileURLWithPath: path)
         let scale = NSScreen.main?.backingScaleFactor ?? 2
         let request = QLThumbnailGenerator.Request(fileAt: url, size: CGSize(width: size, height: size), scale: scale, representationTypes: .all)
         QLThumbnailGenerator.shared.generateBestRepresentation(for: request) { rep, _ in
             let image = rep?.nsImage ?? NSWorkspace.shared.icon(forFile: path)
-            let data = png(image, pixels: Int(size * scale))
+            let result = png(image, pixels: Int(size * scale)).map { "data:image/png;base64," + $0.base64EncodedString() }
             DispatchQueue.main.async {
-                let result = data.map { "data:image/png;base64," + $0.base64EncodedString() }
                 if cache.count > 500 { cache.removeAll(); images.removeAll() }
-                cache[path] = result
+                cache[key] = result
                 images[path] = image
-                done(result)
+                for fn in waiting.removeValue(forKey: key) ?? [] { fn(result) }
             }
         }
+    }
+
+    /// Draw these ahead of time, so tiles appear with their pictures instead of filling in as the Shelf opens.
+    static func warm(_ paths: [String]) {
+        for p in paths { dataURL(for: p) { _ in } }
     }
 
     /// The picture to drag a file by: its thumbnail if the Shelf drew one, else its Finder icon.

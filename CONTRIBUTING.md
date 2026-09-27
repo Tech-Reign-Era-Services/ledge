@@ -33,7 +33,7 @@ Useful while working:
 
 - `LEDGE_DEBUG=1 dist/Ledge.app/Contents/MacOS/Ledge` logs every state change (closed, peek, open) to the terminal. Errors in the page are logged there too, as `[page] …`.
 - `LEDGE_SNAPSHOT=/tmp/open.png LEDGE_STATE=open dist/Ledge.app/Contents/MacOS/Ledge` draws the island in that state to a PNG and quits. Handy for before and after screenshots.
-- The first launch turns on Open at Login. Turn it off from the menu bar icon if you don't want your dev build starting with your Mac.
+- Only the installed app (in `/Applications`) turns on Open at Login by itself, so your dev build in `dist/` won't start with your Mac.
 
 ## How the code is organised
 
