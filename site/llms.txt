@@ -1,0 +1,16 @@
+# Ledge
+
+> Ledge is a free, open-source (MIT) macOS app that turns the notch into a Shelf: a place to keep files, text and links for a moment, then drag them out wherever they need to go. It also shows live activities, like the Dynamic Island on iPhone. About 1 MB, written in Swift with the island drawn in the WebKit that ships with macOS.
+
+- Shelf: drag files, folders, text or links toward the notch to drop them in; drag them out to any app, or copy with ⌘C and paste with ⌘V. Hover to peek, or press ⌃⌥S. Space opens Quick Look. Files are kept by reference and never copied, moved or changed.
+- Live activities: while Apple Music or Spotify plays, the island shows the album artwork and bars that follow the music (macOS 14.2+ asks once for System Audio Recording; nothing is recorded or saved), with play, pause and skip on hover.
+- Other apps can show a build, upload or timer with progress by opening a ledge://activity URL or posting the com.techreignera.ledge.activity distributed notification. No SDK.
+- Macs without a notch (external displays, Mac mini): the island is a pill in the middle of the menu bar.
+- Privacy: no account, no analytics. Its only network request downloads the album artwork of the song Spotify is playing.
+- Requirements: macOS 13 Ventura or later, Apple silicon or Intel. One universal .pkg or .zip. Not signed with a paid Apple certificate, so macOS asks for confirmation once on first open.
+
+## Links
+
+- [Download (latest release)](https://github.com/Tech-Reign-Era-Services/ledge/releases/latest)
+- [Source code and README](https://github.com/Tech-Reign-Era-Services/ledge)
+- [Report an issue](https://github.com/Tech-Reign-Era-Services/ledge/issues)
