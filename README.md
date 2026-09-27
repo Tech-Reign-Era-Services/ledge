@@ -9,6 +9,12 @@ A Shelf in your Mac's notch. Keep files, text and links there for a moment, then
 
 The Shelf used to be part of [Inlet](https://github.com/Tech-Reign-Era-Services/inlet). The first time Ledge runs, it brings over anything that was on Inlet's Shelf.
 
+## Download
+
+Get **`Ledge-<version>.pkg`** (or the `.zip`) from [**Releases**](https://github.com/Tech-Reign-Era-Services/ledge/releases/latest). One download for every Mac, Apple silicon and Intel alike, under 1 MB. Needs macOS 13 Ventura or later.
+
+The first time, macOS may say it can't verify it: Ledge isn't signed with a paid Apple certificate. **Right-click** it → **Open** → **Open**.
+
 ## Why it's so small
 
 Ledge is about 840 KB. Inlet's Electron build is 217 MB. The island is still the same HTML, CSS and JavaScript,
@@ -32,8 +38,6 @@ You need the Xcode Command Line Tools (`xcode-select --install`), not Xcode itse
 ./build.sh test     # run the tests
 ./build.sh dist     # also dist/Ledge-<version>.zip and .pkg
 ```
-
-The build is ad-hoc signed, not notarized, so the first time you open it you may need to right-click › Open.
 
 Requires macOS 13 or later.
 
