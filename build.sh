@@ -4,10 +4,11 @@
 #   ./build.sh run      → build, then open it (quits a running copy first)
 #   ./build.sh test     → run the tests
 #   ./build.sh dist     → the app, plus dist/Ledge-<version>.zip and dist/Ledge-<version>.pkg
+#   ./build.sh check    → fail if the app has grown past its size budget (run after app or dist)
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION="1.0.0"
+VERSION="$(tr -d '[:space:]' < VERSION)" # the one place the version lives
 BUNDLE_ID="com.techreignera.ledge"
 MIN_MACOS="13.0"
 APP="dist/Ledge.app"
@@ -95,10 +96,20 @@ dist() {
   echo "Built $zip ($(du -h "$zip" | cut -f1)) and $pkg ($(du -h "$pkg" | cut -f1))"
 }
 
+# Ledge's whole point is being small: keep an eye on it.
+SIZE_BUDGET_KB=2048
+check() {
+  local kb
+  kb=$(du -sk "$APP" | cut -f1)
+  if [ "$kb" -gt "$SIZE_BUDGET_KB" ]; then echo "Ledge.app is ${kb} KB, over the ${SIZE_BUDGET_KB} KB budget"; exit 1; fi
+  echo "Ledge.app is ${kb} KB (budget ${SIZE_BUDGET_KB} KB)"
+}
+
 case "${1:-app}" in
   app) app ;;
   run) app; pkill -x Ledge || true; open "$APP" ;;
   test) test_ ;;
-  dist) test_ && dist ;;
-  *) echo "usage: ./build.sh [app|run|test|dist]"; exit 1 ;;
+  dist) test_ && dist && check ;;
+  check) check ;;
+  *) echo "usage: ./build.sh [app|run|test|dist|check]"; exit 1 ;;
 esac

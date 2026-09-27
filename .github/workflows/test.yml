@@ -1,0 +1,29 @@
+# Runs the tests and a full build on every pull request and on pushes to main.
+# macOS runners, because Ledge is built with the Xcode Command Line Tools and links AppKit and WebKit.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./build.sh test
+      - name: Check the page's scripts parse
+        run: for f in web/*.js; do node -e "new Function(require('fs').readFileSync('$f','utf8'))" || exit 1; done
+      - name: Build the app, zip and installer, and check the size budget
+        run: ./build.sh dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ledge-build
+          path: |
+            dist/Ledge-*.zip
+            dist/Ledge-*.pkg
+          retention-days: 7
