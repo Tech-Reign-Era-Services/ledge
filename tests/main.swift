@@ -141,5 +141,72 @@ test("a drag opens the Shelf once it gets near the notch, not just on it") {
     check(!Geometry.nearShelf(x: -1280, y: -100, flat))
 }
 
+test("without a notch, something live or on the Shelf becomes a floating pill") {
+    let L = Geometry.layout(external, notch: nil, count: 0, live: true)
+    check(L.islandClosed.height < external.menuBar && L.islandClosed.height >= 18, "fits inside the menu bar")
+    check(L.insetClosed > 0, "floats clear of the top edge")
+    eq(L.closed.height, L.islandClosed.height + L.insetClosed)
+    eq(Double(L.closed.x) + Double(L.closed.width) / 2, -1280, "centred")
+    eq(Geometry.layout(external, notch: nil, count: 2).islandClosed, L.islandClosed, "Shelf items show the same pill")
+    check(Geometry.layout(external, notch: nil, count: 0).islandClosed.height < 10, "nothing to show: back to the thin strip")
+    eq(L.insetOpen, L.insetClosed, "opens out of the pill")
+    let n = Geometry.layout(mbp, notch: mbpNotch, count: 0, live: true)
+    eq(n.islandClosed.width, 209 + Geometry.ear * 2, "with a notch, a live activity sits beside it")
+    eq(n.insetClosed, 0)
+}
+
+test("each live activity adds a row to the open island, up to two") {
+    let base = Geometry.layout(mbp, notch: mbpNotch, count: 1).islandOpen.height
+    eq(Geometry.layout(mbp, notch: mbpNotch, count: 1, live: true, activities: 1).islandOpen.height, base + Geometry.row)
+    eq(Geometry.layout(mbp, notch: mbpNotch, count: 1, live: true, activities: 5).islandOpen.height, base + Geometry.row * 2)
+}
+
+let t0 = 1_000_000.0
+test("activities from other apps are validated") {
+    guard case .upsert(let a)? = Activities.parse(["id": "build", "title": "  Building Ledge  ", "symbol": "hammer.fill", "progress": "1.7", "tint": "#7b96ff", "trailing": "80% done soon", "source": "Xcode"], now: t0) else { return check(false, "parsed") }
+    eq(a.id, "app:build")
+    eq(a.title, "Building Ledge", "trimmed")
+    eq(a.symbol, "hammer.fill")
+    eq(a.progress, 1, "clamped")
+    eq(a.trailing, "80% done", "at most 8 characters")
+    eq(a.expires, t0 + Activities.defaultTTL * 1000, "goes away by itself")
+    check(Activities.parse(["id": "../x", "title": "t"], now: t0) == nil, "ids are plain")
+    check(Activities.parse(["id": "x"], now: t0) == nil, "a new activity needs a title")
+    eq(Activities.parse(["id": "x", "action": "end"], now: t0), .end("app:x"))
+    guard case .upsert(let b)? = Activities.parse(["id": "x", "title": "t", "symbol": "<img>", "tint": "red", "link": "file:///etc/passwd", "emoji": "hello", "ttl": "99999999"], now: t0) else { return check(false, "parsed") }
+    eq(b.symbol, nil); eq(b.tint, nil); eq(b.link, nil); eq(b.emoji, nil)
+    eq(b.expires, t0 + Activities.maxTTL * 1000, "at most a day")
+    eq(Activities.safeLink("https://github.com/x"), "https://github.com/x")
+    eq(Activities.safeLink("javascript:alert(1)"), nil)
+    check(Activities.isEmoji("🎧") && !Activities.isEmoji("ab"), "emoji")
+    // An update keeps what it doesn't mention.
+    guard case .upsert(let c)? = Activities.parse(["id": "build", "progress": "0.5"], existing: a, now: t0 + 1000) else { return check(false, "update") }
+    eq(c.title, "Building Ledge"); eq(c.progress, 0.5); eq(c.symbol, "hammer.fill")
+    eq(c.expires, a.expires, "an update doesn't extend the time unless it says so")
+    check(a.json(icon: nil)["link"] == nil && b.json(icon: nil)["link"] == nil, "the page never sees a link")
+}
+
+test("music from Apple Music and Spotify") {
+    let m = Activities.music(["Player State": "Playing", "Name": "Song", "Artist": "Band", "Album": "Record", "Total Time": NSNumber(value: 200_000)], app: "Music", bundleID: "com.apple.Music", now: t0)
+    eq(m?.title, "Song"); eq(m?.subtitle, "Band — Record"); eq(m?.duration, 200); eq(m?.playing, true)
+    eq(m?.expires, .infinity, "stays while playing")
+    let s = Activities.music(["Player State": "Paused", "Name": "Track", "Duration": NSNumber(value: 180_000), "Playback Position": NSNumber(value: 42.5)], app: "Spotify", bundleID: "com.spotify.client", now: t0)
+    eq(s?.playing, false); eq(s?.elapsed, 42.5); eq(s?.duration, 180)
+    eq(s?.expires, t0 + Activities.pausedTTL * 1000, "paused music goes away after a while")
+    check(Activities.music(["Player State": "Stopped", "Name": "Song"], app: "Music", bundleID: "com.apple.Music", now: t0) == nil, "stopped")
+}
+
+test("the list: music first, newest next, at most four from apps, expired ones go") {
+    var list: [Activity] = []
+    for i in 0..<6 { if case .upsert(let a)? = Activities.parse(["id": "a\(i)", "title": "t\(i)", "ttl": "\(10 + i)"], now: t0) { list = Activities.apply(.upsert(a), to: list) } }
+    eq(list.map(\.id), ["app:a5", "app:a4", "app:a3", "app:a2"])
+    list = Activities.apply(.upsert(Activity(id: "music", kind: "music", source: "Music", title: "Song")), to: list)
+    eq(list.first?.id, "music")
+    list = Activities.apply(.end("app:a4"), to: list)
+    eq(list.count, 4)
+    eq(Activities.prune(list, now: t0 + 13_500)?.map(\.id), ["music", "app:a5"], "a2 and a3 expired")
+    eq(Activities.prune(list, now: t0), nil, "nothing changed")
+}
+
 print(failures == 0 ? "\nall passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

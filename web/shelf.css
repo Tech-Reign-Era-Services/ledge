@@ -16,6 +16,8 @@
   --bar: 32px; /* notch / menu bar height: the top strip of the open island */
   --notch: 0px;
   --sh: 10px; /* shoulder radius */
+  --top: 0px; /* no notch: the pill floats this far below the top edge */
+  --live: #8ea2ff; /* music's dancing bars */
   /* Damped springs (generated, not guessed): a gentle one for the island, a bouncier one for items. */
   --spring: linear(0, 0.023, 0.081, 0.163, 0.258, 0.359, 0.46, 0.556, 0.644, 0.724, 0.793, 0.852, 0.901, 0.941, 0.972, 0.996, 1.013, 1.025, 1.033, 1.037, 1.038, 1.038, 1.036, 1.033, 1.029, 1.025, 1.021, 1.017, 1.014, 1.011, 1.008, 1.006, 1.004, 1.002, 1.001, 1, 1, 0.999, 0.999, 0.999, 1);
   --bouncy: linear(0, 0.023, 0.085, 0.174, 0.281, 0.396, 0.513, 0.626, 0.731, 0.825, 0.906, 0.974, 1.028, 1.068, 1.097, 1.116, 1.125, 1.126, 1.122, 1.113, 1.101, 1.087, 1.072, 1.057, 1.043, 1.031, 1.019, 1.009, 1.001, 0.995, 0.99, 0.987, 0.985, 0.984, 0.984, 0.985, 0.986, 0.988, 0.99, 0.991, 1);
@@ -43,15 +45,15 @@ body {
 
 .island {
   position: absolute;
-  top: 0;
+  top: var(--top);
   left: 50%;
   width: var(--w);
   height: var(--h);
   transform: translateX(-50%);
   /* Closing: quick and settled, no bounce. Opening (below): a spring. */
-  transition: width 0.3s var(--settle), height 0.3s var(--settle);
+  transition: width 0.3s var(--settle), height 0.3s var(--settle), top 0.3s var(--settle);
 }
-body.is-open .island { transition: width 0.56s var(--spring), height 0.56s var(--spring); }
+body.is-open .island { transition: width 0.56s var(--spring), height 0.56s var(--spring), top 0.56s var(--spring); }
 
 .clip {
   position: absolute;
@@ -90,7 +92,7 @@ body.is-open .clip::after { opacity: 1; }
 }
 .shoulder.left { left: calc(-1 * var(--sh)); background: radial-gradient(circle at 0 100%, transparent calc(var(--sh) - 0.5px), #000 var(--sh)); }
 .shoulder.right { right: calc(-1 * var(--sh)); background: radial-gradient(circle at 100% 100%, transparent calc(var(--sh) - 0.5px), #000 var(--sh)); }
-body:not(.has-items):not(.is-open) .shoulder { opacity: 0; }
+body:not(.has-items):not(.live):not(.is-open) .shoulder { opacity: 0; }
 
 /* A quick swallow when something is dropped in. */
 .clip.gulp { animation: gulp 0.5s var(--bouncy); }
@@ -98,8 +100,17 @@ body:not(.has-items):not(.is-open) .shoulder { opacity: 0; }
 
 /* No notch: a thin strip at the top edge. Nearly invisible, but it still catches the pointer and drops. */
 body.flat:not(.is-open) .clip { background: rgba(0, 0, 0, 0.01); border-radius: 0 0 6px 6px; }
-body.flat.has-items:not(.is-open) .clip { background: rgba(0, 0, 0, 0.85); }
-body.flat .ears, body.flat:not(.is-open) .shoulder { display: none; }
+body.flat .shoulder { display: none; }
+body.flat:not(.has-items):not(.live) .ears { display: none; }
+
+/* No notch, but something to show: a floating pill in the middle of the menu bar, like the iPhone's Dynamic Island.
+   Open, it grows out of the pill with every corner rounded. */
+body.flat.has-items:not(.is-open) .clip,
+body.flat.live:not(.is-open) .clip { background: #000; border-radius: calc(var(--h) / 2); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22); }
+body.flat.is-open .clip { border-radius: 30px; }
+body.flat .ears { padding: 0 8px 0 5px; }
+body.flat .ear-thumb, body.flat .ear-thumb img { width: 16px; height: 16px; border-radius: 50%; }
+body.flat .ear-count { font-size: 12px; }
 
 /* ---------- closed: the newest item and the count, either side of the notch ---------- */
 
@@ -113,7 +124,9 @@ body.flat .ears, body.flat:not(.is-open) .shoulder { display: none; }
   padding: 0 10px;
   transition: opacity 0.18s, transform 0.3s var(--settle);
 }
-body.is-open .ears, body:not(.has-items) .ears, body:not(.placed) .ears { opacity: 0; transform: scale(0.8); pointer-events: none; }
+body.is-open .ears, body:not(.has-items) .ears, body:not(.placed) .ears, body.live .ears:not(.live-ears) { opacity: 0; transform: scale(0.8); pointer-events: none; }
+body.live:not(.is-open).placed .live-ears { opacity: 1; transform: none; }
+body:not(.live) .live-ears { opacity: 0; transform: scale(0.8); pointer-events: none; }
 .ear-thumb {
   width: 20px;
   height: 20px;
@@ -445,3 +458,75 @@ body.dragging.is-open .drop-icon { animation: bob 1.3s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: 0.01s !important; transition-delay: 0s !important; }
 }
+
+/* ---------- live activities ---------- */
+
+/* Closed: the activity's picture on the left, and on the right bars that dance with the music, a progress ring,
+   or a few characters. */
+.live-icon { border-radius: 6px; }
+.live-icon img { width: 100%; height: 100%; object-fit: contain; }
+.live-emoji { line-height: 1; }
+.live-trail { display: flex; align-items: center; justify-content: flex-end; min-width: 16px; }
+.live-text { font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.eq { display: inline-flex; align-items: center; gap: 2px; height: 14px; }
+.eq i { width: 3px; height: 14px; border-radius: 2px; background: var(--live); transform: scaleY(0.3); }
+/* Transforms only, so the compositor animates them; the page itself does no work per frame. */
+body.live-playing:not(.is-open) .eq.on i { animation: eq 0.8s ease-in-out infinite alternate; will-change: transform; }
+.eq.on i:nth-child(2) { animation-duration: 0.55s; animation-delay: -0.2s; }
+.eq.on i:nth-child(3) { animation-duration: 0.95s; animation-delay: -0.5s; }
+.eq.on i:nth-child(4) { animation-duration: 0.7s; animation-delay: -0.1s; }
+@keyframes eq { from { transform: scaleY(0.25); } to { transform: scaleY(1); } }
+.ring { width: 18px; height: 18px; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 2.6; }
+.ring-bg { stroke: var(--glass-2); }
+.ring-fg { stroke: var(--accent); stroke-linecap: round; transition: stroke-dasharray 0.4s var(--settle); }
+body.flat .eq { height: 12px; }
+body.flat .eq i { height: 12px; }
+body.flat .ring { width: 16px; height: 16px; }
+
+/* Open: a row for each activity, between the header and the Shelf's items. */
+.now { flex: none; display: flex; flex-direction: column; padding: 2px 14px 0; }
+.now:empty { display: none; }
+.now-row {
+  position: relative;
+  height: 58px;
+  margin-bottom: 6px;
+  padding: 0 12px 0 9px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border-radius: 18px;
+  background: var(--glass);
+  transition: background 0.15s;
+  animation: hint-in 0.35s var(--settle);
+}
+.now-row.go:hover { background: var(--glass-2); }
+.now-art { width: 40px; height: 40px; flex: none; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--ink-2); }
+.now-art img { width: 40px; height: 40px; object-fit: contain; }
+.now-art.emoji { background: var(--glass); }
+.now-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.now-text b { font-weight: 600; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now-text span { font-size: 11px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now-bar { height: 3px; margin-top: 4px; border-radius: 2px; background: var(--glass-2); overflow: hidden; }
+.now-bar i { display: block; height: 100%; background: var(--ink); transform-origin: 0 50%; }
+.now-trail { font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.now-controls { display: flex; align-items: center; gap: 4px; }
+.ctl {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 15px;
+  padding: 0;
+  background: transparent;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.2s var(--bouncy);
+}
+.ctl:hover { background: var(--glass-2); }
+.ctl:active { transform: scale(0.9); }
+.ctl.main { width: 34px; height: 34px; border-radius: 17px; background: var(--glass); }
+.ctl .icon svg { fill: currentColor; }
+.now-row .x { top: 4px; right: 4px; }
+.now-row:hover .x { opacity: 1; transform: scale(1); }

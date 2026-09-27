@@ -11,6 +11,10 @@ const ICON_PATHS = {
   down: '<path d="m6 9 6 6 6-6"/>',
   shelf: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 12h18M10 8h4M10 16h4"/>',
   copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/>',
+  play: '<path d="M7 4.5v15l12-7.5z"/>',
+  pause: '<path d="M8 5v14M16 5v14"/>',
+  next: '<path d="M5 5v14l10-7z"/><path d="M19 5v14"/>',
+  prev: '<path d="M19 5v14L9 12z"/><path d="M5 5v14"/>',
   link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
 };
 

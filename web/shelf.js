@@ -60,10 +60,12 @@ function applyState({ state, layout }) {
   root.setProperty('--bar', `${layout.bar}px`);
   root.setProperty('--notch', `${layout.hasNotch ? layout.notch.width : 0}px`);
   root.setProperty('--sh', `${layout.shoulder}px`);
+  root.setProperty('--top', `${open ? layout.inset.open : layout.inset.closed}px`);
   body.classList.toggle('is-open', open);
   body.classList.toggle('flat', !layout.hasNotch);
   body.classList.add('placed'); // sizes known: the ears may show
   if (open && !wasOpen) enterItems();
+  if (open !== wasOpen) renderNow(); // the music bar moves only while it can be seen
   if (!open) {
     S.previewing = null;
     S.selected.clear();
@@ -448,11 +450,113 @@ tray.addEventListener('wheel', (e) => {
 }, { passive: false });
 tray.addEventListener('scroll', updateFades, { passive: true });
 
+// ---------- live activities (music, and whatever other apps post) ----------
+
+S.live = [];
+
+function setActivities(list) {
+  const had = new Set(S.live.map((a) => a.id));
+  S.live = list || [];
+  body.classList.toggle('live', S.live.length > 0);
+  body.classList.toggle('live-playing', S.live.some((a) => a.kind === 'music' && a.playing));
+  renderLiveEars(S.live.some((a) => !had.has(a.id)));
+  renderNow();
+}
+
+/** The activity's picture: an app icon or symbol the app drew, or an emoji. */
+function liveArt(a, size) {
+  if (a.emoji) return h('span', { class: 'live-emoji', style: `font-size:${Math.round(size * 0.72)}px` }, a.emoji);
+  if (a.icon) return h('img', { src: a.icon, alt: '', draggable: 'false' });
+  return icon('dots', Math.round(size * 0.6));
+}
+
+/** Beside the island when it's closed: dancing bars for music, a ring for progress, or a few characters. */
+function trailFor(a) {
+  if (a.kind === 'music') return h('span', { class: `eq ${a.playing ? 'on' : ''}` }, h('i'), h('i'), h('i'), h('i'));
+  if (a.progress != null) return ring(a.progress, a.tint);
+  if (a.trailing) return h('span', { class: 'live-text' }, a.trailing);
+  return null;
+}
+
+function ring(progress, tint) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 20 20');
+  svg.setAttribute('class', 'ring');
+  const c = 2 * Math.PI * 7.5;
+  for (const [cls, dash] of [['ring-bg', ''], ['ring-fg', `${(c * progress).toFixed(2)} ${c.toFixed(2)}`]]) {
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('cx', '10'); el.setAttribute('cy', '10'); el.setAttribute('r', '7.5');
+    el.setAttribute('class', cls);
+    if (dash) el.setAttribute('stroke-dasharray', dash);
+    if (dash && tint) el.setAttribute('stroke', tint);
+    svg.append(el);
+  }
+  return svg;
+}
+
+function renderLiveEars(bump) {
+  const a = S.live[0];
+  $('live-icon').replaceChildren(...(a ? [liveArt(a, 20)] : []));
+  const trail = a && trailFor(a);
+  $('live-trail').replaceChildren(...(trail ? [trail] : []));
+  if (bump && S.shown) replay($('live-ears'), 'bump');
+}
+
+/** Where a playing song is now, from where it was when the player last said. */
+function musicAt(a) {
+  if (a.elapsed == null || !a.duration) return null;
+  const e = a.elapsed + (a.playing ? (Date.now() - a.at) / 1000 : 0);
+  return Math.min(1, Math.max(0, e / a.duration));
+}
+
+function bar(fraction, tint, runSeconds) {
+  const fill = h('i', { style: `transform:scaleX(${fraction.toFixed(4)})${tint ? `;background:${tint}` : ''}` });
+  const el = h('div', { class: 'now-bar' }, fill);
+  // Playing: slide to the end over the time that's left, on the compositor. Nothing runs per frame in the page.
+  if (runSeconds > 0) requestAnimationFrame(() => requestAnimationFrame(() => {
+    fill.style.transition = `transform ${runSeconds}s linear`;
+    fill.style.transform = 'scaleX(1)';
+  }));
+  return el;
+}
+
+function renderNow() {
+  const open = S.state !== 'closed';
+  $('now').replaceChildren(...S.live.slice(0, 2).map((a) => {
+    const act = (action) => (e) => { e.stopPropagation(); api.activity(a.id, action); };
+    let right = null;
+    let below = null;
+    if (a.kind === 'music') {
+      right = h('div', { class: 'now-controls' },
+        h('button', { class: 'ctl', title: 'Previous', 'aria-label': 'Previous', onclick: act('previous') }, icon('prev', 13)),
+        h('button', { class: 'ctl main', title: a.playing ? 'Pause' : 'Play', 'aria-label': a.playing ? 'Pause' : 'Play', onclick: act('playpause') }, icon(a.playing ? 'pause' : 'play', 15)),
+        h('button', { class: 'ctl', title: 'Next', 'aria-label': 'Next', onclick: act('next') }, icon('next', 13)));
+      const at = musicAt(a);
+      if (at != null) below = bar(at, null, open && a.playing ? a.duration * (1 - at) : 0);
+    } else {
+      if (a.trailing) right = h('span', { class: 'now-trail' }, a.trailing);
+      if (a.progress != null) below = bar(a.progress, a.tint, 0);
+    }
+    const clickable = a.kind === 'music' || a.link;
+    return h('div', { class: `now-row ${clickable ? 'go' : ''}`, title: clickable ? `Open ${a.kind === 'music' ? a.source : 'it'}` : null, onclick: clickable ? act('open') : null },
+      h('div', { class: `now-art ${a.emoji ? 'emoji' : ''}` }, liveArt(a, 40)),
+      h('div', { class: 'now-text' },
+        h('b', {}, a.title),
+        h('span', {}, [a.source, a.subtitle].filter(Boolean).join(' · ')),
+        below),
+      right,
+      a.kind !== 'music' && h('button', { class: 'x', title: 'Dismiss', 'aria-label': `Dismiss ${a.title}`, onclick: act('dismiss') }, icon('x', 10)));
+  }));
+}
+
 // ---------- boot ----------
 
 $('title-icon').append(icon('shelf', 14));
 $('drop-icon').append(icon('down', 18));
 api.onState(applyState);
 api.onItems(setItems);
+api.onActivities(setActivities);
+api.activities().then(setActivities);
 api.onFlash((ms) => later('close', ms, () => !S.hover && S.state === 'peek' && setState('closed')));
 api.items().then(setItems);

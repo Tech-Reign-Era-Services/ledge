@@ -7,6 +7,12 @@ A Shelf in your Mac's notch. Keep files, text and links there for a moment, then
 - **Space** opens Quick Look, just like in Finder. **⌘V** in the Shelf adds whatever is on the clipboard.
 - Files are kept by reference: never copied, never moved. On a Mac without a notch, the Shelf sits in the middle of the menu bar.
 
+**Live activities**, like the Dynamic Island on iPhone:
+
+- **Music:** while Apple Music or Spotify plays, the island shows the app and bars that dance to it. Hover over the island for the song, a progress bar, and play, pause and skip.
+- **Other apps** can show what they're doing, like a build, an upload or a timer, with a title, a symbol or emoji, progress, and a few characters beside the island. See [Show your app in the island](#show-your-app-in-the-island).
+- **No notch? No problem.** On an external display, or any Mac without a notch, the island is a floating pill in the middle of the menu bar that appears when something is live or on the Shelf, and grows out of itself when you hover.
+
 The Shelf used to be part of [Inlet](https://github.com/Tech-Reign-Era-Services/inlet). The first time Ledge runs, it brings over anything that was on Inlet's Shelf.
 
 ## Download
@@ -14,6 +20,47 @@ The Shelf used to be part of [Inlet](https://github.com/Tech-Reign-Era-Services/
 Get **`Ledge-<version>.pkg`** (or the `.zip`) from [**Releases**](https://github.com/Tech-Reign-Era-Services/ledge/releases/latest). One download for every Mac, Apple silicon and Intel alike, under 1 MB. Needs macOS 13 Ventura or later.
 
 The first time, macOS may say it can't verify it: Ledge isn't signed with a paid Apple certificate. **Right-click** it → **Open** → **Open**.
+
+## Show your app in the island
+
+Any app or script can start, update and end a live activity. There's no SDK: open a URL, or post a notification.
+
+```sh
+# Start (or update) an activity. Only id and title are needed to start one.
+open -g "ledge://activity?id=build&title=Building&subtitle=Compiling%2014%20files&symbol=hammer.fill&progress=0.4&source=Xcode"
+
+# Update it: only what changed.
+open -g "ledge://activity?id=build&progress=0.9"
+
+# End it.
+open -g "ledge://activity/end?id=build"
+```
+
+From Swift (or anything that can post a distributed notification), without opening a URL. The object is a JSON string,
+because sandboxed apps can't send `userInfo`:
+
+```swift
+DistributedNotificationCenter.default().postNotificationName(
+    .init("com.techreignera.ledge.activity"),
+    object: #"{"id":"upload","title":"Uploading photos","symbol":"arrow.up.circle.fill","progress":0.3}"#,
+    userInfo: nil, deliverImmediately: true)
+// …and {"id":"upload","action":"end"} when it's done.
+```
+
+| Field | What it does |
+|---|---|
+| `id` | Required. Letters, digits, `.`, `_` and `-`. The same id updates the same activity. |
+| `title` | Required to start. Up to 60 characters. |
+| `subtitle` | A second line, up to 80 characters. |
+| `source` | Who it's from, shown small (e.g. your app's name). |
+| `symbol` | An [SF Symbol](https://developer.apple.com/sf-symbols/) name, e.g. `timer`. Or `emoji`: one emoji. Or `bundle`: an app's bundle id, to show its icon. |
+| `progress` | 0 to 1. A ring beside the closed island, and a bar when it's open. |
+| `trailing` | Up to 8 characters beside the closed island, e.g. `4:59` or `80%`. |
+| `tint` | A colour like `#ff9f0a` for the symbol, ring and bar. |
+| `link` | Opened when someone clicks the activity: a web page or your app's own URL scheme (never `file:`). |
+| `ttl` | Seconds until it goes away by itself. Default 10 minutes, at most a day. |
+
+Everything is treated as untrusted: text is shown as text, never as markup, and at most four app activities show at once.
 
 ## Why it's so small
 
@@ -45,19 +92,21 @@ Requires macOS 13 or later.
 
 ```
 Sources/
-  App.swift         menu bar item, shortcut, Open at Login, moving over from Inlet
+  App.swift         menu bar item, shortcut, Open at Login, ledge:// URLs, moving over from Inlet
+  Activities.swift  live activities: what's accepted from other apps, music, the list (no AppKit, tested)
+  LiveActivities.swift  listening for music and other apps, player controls, icons
   Island.swift      the panel over the notch, its states and sizes, and the page's bridge
   Native.swift      drag detection, the global shortcut, thumbnails, clipboard, Quick Look
   Layout.swift      where the island sits for each state (no AppKit, tested)
   ShelfStore.swift  the items and shelf.json (no AppKit, tested)
 web/                the island itself: shelf.html, shelf.css, shelf.js (from Inlet), bridge.js
-tests/main.swift    tests for Layout and ShelfStore
+tests/main.swift    tests for Layout, ShelfStore and Activities
 scripts/            the icon, and the installer's pre/postinstall scripts
 ```
 
 Items are saved in `~/Library/Application Support/Ledge/shelf.json`.
 
-For development, `LEDGE_DEBUG=1` logs state changes, and `LEDGE_SNAPSHOT=out.png LEDGE_STATE=open` draws the island
+For development, `LEDGE_DATA_DIR=/tmp/ledge-dev` keeps a dev build's Shelf apart from your real one, `LEDGE_DEBUG=1` logs state changes, `LEDGE_NO_NOTCH=1` behaves as on a screen without a notch, and `LEDGE_SNAPSHOT=out.png LEDGE_STATE=open` draws the island
 to a PNG and quits. See [CONTRIBUTING.md](CONTRIBUTING.md) to help out.
 
 ## Releasing (maintainers)
