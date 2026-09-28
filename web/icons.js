@@ -15,6 +15,7 @@ const ICON_PATHS = {
   pause: '<path d="M8 5v14M16 5v14"/>',
   next: '<path d="M5 5v14l10-7z"/><path d="M19 5v14"/>',
   prev: '<path d="M19 5v14L9 12z"/><path d="M5 5v14"/>',
+  pen: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
   link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
 };
 

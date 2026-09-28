@@ -462,6 +462,12 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
             if texts.isEmpty { return reply(["count": 0], nil) }
             Clipboard.copyText(texts.joined(separator: "\n\n"))
             reply(["count": texts.count, "kind": "text"], nil)
+        // A note being written: Ledge has no Edit menu, so its ⌘C, ⌘X and ⌘V come through here.
+        case "clipboardText":
+            reply(Clipboard.text() ?? "", nil)
+        case "copyText":
+            if !string(0).isEmpty { Clipboard.copyText(String(string(0).prefix(ShelfStore.maxText))) }
+            reply(nil, nil)
         case "open":
             if let it = store.get([string(0)]).first {
                 if it.kind == "file", let p = it.path, FileManager.default.fileExists(atPath: p) { NSWorkspace.shared.open(URL(fileURLWithPath: p)) }
