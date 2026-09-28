@@ -2,7 +2,7 @@
 
 What's new in each release, newest first. Written for people using Ledge, not for developers.
 
-## Unreleased
+## 1.3.0
 
 - **Quick notes.** Click the notch and start typing: a note box opens straight away. Press ⏎ to keep the note on the Shelf, ⇧⏎ for a new line, or Esc to cancel. Kept notes work like any text on the Shelf: drag them out, ⌘C, or × to clean them up. There's also a pen button beside Copy all.
 
