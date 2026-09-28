@@ -2,7 +2,7 @@
 
 What's new in each release, newest first. Written for people using Ledge, not for developers.
 
-## Unreleased
+## 1.5.0
 
 - **Text with pictures, for remote desktops.** Copy from Notes, Mail, TextEdit, Pages or Safari and press ⌘V in the Shelf: the text becomes notes and each picture becomes an image file, in order. AnyDesk and other remote desktops pass text and files, but drop pictures inside text, so now you can take the pictures across too: select one and ⌘C, or drag it over. Pasted pictures are deleted when you remove them from the Shelf.
 - **Ledge no longer keeps your Mac awake when no music is playing.** While the music bars listen to a song, macOS keeps the Mac awake, and Ledge could keep listening after the music had stopped: when the player quit without saying so, when the sound went silent, or with the display off. Now it lets go in each case, and starts again when the music does.
