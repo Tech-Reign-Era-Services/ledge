@@ -2,7 +2,7 @@
 
 What's new in each release, newest first. Written for people using Ledge, not for developers.
 
-## Unreleased
+## 1.4.0
 
 - **Update from inside Ledge.** Choose **Check for Updates…** in the menu bar icon, or let Ledge check once a day (Settings → Updates). A new version shows in the island: click it, and Ledge downloads the installer, makes sure it's exactly the one on GitHub, and opens it. Ledge quits, updates and opens again, and what's on your Shelf is kept.
 
