@@ -10,5 +10,5 @@
 
 - [ ] `./build.sh test` passes
 - [ ] Changes to `Layout.swift` or `ShelfStore.swift` come with tests
-- [ ] Follows the [ground rules](https://github.com/Tech-Reign-Era-Services/ledge/blob/main/CONTRIBUTING.md#ground-rules): files are never copied or moved, nothing is sent over the network, and no new dependencies
+- [ ] Follows the [ground rules](https://github.com/Tech-Reign-Era-Services/ledge/blob/main/CONTRIBUTING.md#ground-rules): files are never copied or moved, no new network requests, and no new dependencies
 - [ ] User-visible change? Added a line to `CHANGELOG.md`

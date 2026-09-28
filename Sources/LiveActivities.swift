@@ -58,6 +58,10 @@ final class ActivityCenter {
         apply(r)
     }
 
+    /// Ledge's own activities (an update, for now), with ids other apps can't use ("ledge:…", never "app:…").
+    func post(_ a: Activity) { apply(.upsert(a)) }
+    func end(_ id: String) { if list.contains(where: { $0.id == id }) { apply(.end(id)) } }
+
     private func music(_ info: [String: Any], app: String, bundleID: String) {
         let now = ActivityCenter.now()
         guard var a = Activities.music(info, app: app, bundleID: bundleID, now: now) else {

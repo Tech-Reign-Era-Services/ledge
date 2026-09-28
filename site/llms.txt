@@ -6,7 +6,7 @@
 - Live activities: while Apple Music or Spotify plays, the island shows the album artwork and bars that follow the music (macOS 14.2+ asks once for System Audio Recording; nothing is recorded or saved), with play, pause and skip on hover.
 - Other apps can show a build, upload or timer with progress by opening a ledge://activity URL or posting the com.techreignera.ledge.activity distributed notification. No SDK.
 - Macs without a notch (external displays, Mac mini): the island is a pill in the middle of the menu bar.
-- Privacy: no account, no analytics. Its only network request downloads the album artwork of the song Spotify is playing.
+- Privacy: no account, no analytics. Its only network requests download the album artwork of the song Spotify is playing, and check GitHub for updates (can be turned off).
 - Requirements: macOS 13 Ventura or later, Apple silicon or Intel. One universal .pkg or .zip. Not signed with a paid Apple certificate, so macOS asks for confirmation once on first open.
 
 ## Links

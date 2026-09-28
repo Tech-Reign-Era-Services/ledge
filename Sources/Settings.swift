@@ -2,7 +2,7 @@ import AppKit
 import ServiceManagement
 import SwiftUI
 
-// Settings: the pill's size and place, how the island opens, and the music. Kept in UserDefaults; the island
+// Settings: the pill's size and place, how the island opens, the music, and updates. Kept in UserDefaults; the island
 // follows every change as it happens (Island watches UserDefaults), so a slider moves the real pill.
 
 enum Prefs {
@@ -13,6 +13,8 @@ enum Prefs {
         static let autoHeight = "pill.autoHeight", height = "pill.height", autoGap = "pill.autoGap", gap = "pill.gap"
         static let openWidth = "island.openWidth", hoverOpen = "island.hoverOpen", hoverDelay = "island.hoverDelay"
         static let showArtwork = "music.artwork", realBars = "music.realBars", barColor = "music.barColor"
+        static let autoUpdate = "updates.auto"
+        static let lastUpdateCheck = "updates.lastCheck", announcedUpdate = "updates.announced" // what happened, not settings: Restore Defaults leaves them
     }
 
     static let defaults: [String: Any] = {
@@ -22,6 +24,7 @@ enum Prefs {
             Key.autoHeight: true, Key.height: 19, Key.autoGap: true, Key.gap: 3,
             Key.openWidth: s.openWidth, Key.hoverOpen: true, Key.hoverDelay: 140,
             Key.showArtwork: true, Key.realBars: true, Key.barColor: "#8ea2ff",
+            Key.autoUpdate: true,
         ]
     }()
 
@@ -37,6 +40,15 @@ enum Prefs {
     }
     static var showArtwork: Bool { d.bool(forKey: Key.showArtwork) }
     static var realBars: Bool { d.bool(forKey: Key.realBars) }
+    static var autoUpdate: Bool { d.bool(forKey: Key.autoUpdate) }
+    static var lastUpdateCheck: Double {
+        get { d.double(forKey: Key.lastUpdateCheck) }
+        set { d.set(newValue, forKey: Key.lastUpdateCheck) }
+    }
+    static var announcedUpdate: String {
+        get { d.string(forKey: Key.announcedUpdate) ?? "" }
+        set { d.set(newValue, forKey: Key.announcedUpdate) }
+    }
 
     /// What the page reads (shelf.js applyPrefs).
     static var page: [String: Any] {
@@ -61,7 +73,9 @@ struct SettingsView: View {
     @AppStorage(Prefs.Key.showArtwork) private var showArtwork = true
     @AppStorage(Prefs.Key.realBars) private var realBars = true
     @AppStorage(Prefs.Key.barColor) private var barColor = "#8ea2ff"
+    @AppStorage(Prefs.Key.autoUpdate) private var autoUpdate = true
     @StateObject private var login = LoginItem()
+    var checkForUpdates: () -> Void = {}
 
     var body: some View {
         Form {
@@ -95,6 +109,16 @@ struct SettingsView: View {
                 Text("Music")
             } footer: {
                 Text("The bars listen to Music or Spotify only, and only while a song plays: macOS asks once for System Audio Recording. Nothing is recorded or saved. Off, the bars dance by themselves.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Check for updates automatically", isOn: $autoUpdate)
+                LabeledContent("Ledge \(Updater.current)") { Button("Check Now", action: checkForUpdates) }
+            } header: {
+                Text("Updates")
+            } footer: {
+                Text("Once a day, Ledge asks GitHub for its newest release. Nothing about you or your Shelf is sent. A new version shows in the island: click it to download the installer, which is checked against GitHub's SHA-256 digest before it opens.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -148,10 +172,11 @@ final class LoginItem: ObservableObject {
 /// The Settings window: one, reused, brought to the front each time.
 final class SettingsWindow {
     private var window: NSWindow?
+    var checkForUpdates: () -> Void = {}
 
     func show() {
         if window == nil {
-            let w = NSWindow(contentViewController: NSHostingController(rootView: SettingsView()))
+            let w = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(checkForUpdates: checkForUpdates)))
             w.title = "Ledge Settings"
             w.styleMask = [.titled, .closable]
             w.isReleasedWhenClosed = false

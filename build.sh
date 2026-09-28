@@ -16,7 +16,7 @@ FLAGS=(-swift-version 5 -Osize -whole-module-optimization)
 
 test_() {
   mkdir -p .build
-  swiftc "${FLAGS[@]}" tests/main.swift Sources/ShelfStore.swift Sources/Layout.swift Sources/Activities.swift -o .build/tests
+  swiftc "${FLAGS[@]}" tests/main.swift Sources/ShelfStore.swift Sources/Layout.swift Sources/Activities.swift Sources/Updates.swift -o .build/tests
   .build/tests
 }
 

@@ -19,7 +19,8 @@ For example:
 - A crafted file name, text or link on the Shelf that runs code, or reaches the island's page with more than the `window.shelf` functions in `web/bridge.js`
 - The island's page loading anything from outside the app, or navigating away from `ledge://app/shelf.html`
 - A live activity (from `ledge://activity` or the `com.techreignera.ledge.activity` notification) that gets past its limits, shows markup instead of text, or makes Ledge open a file or run a script
-- Ledge sending anything over the network. Its only request is to download the album artwork of the song Spotify is playing, from the https link Spotify itself gives it; it sends nothing about you or your files
+- Ledge sending anything over the network beyond its two requests: the album artwork of the song Spotify is playing, from the https link Spotify itself gives it, and the update check, which asks GitHub for Ledge's latest release. Neither sends anything about you or your files
+- An update that installs anything other than Ledge's own release: the installer must come from this repository's GitHub Releases and match the SHA-256 digest GitHub lists for it, or it isn't opened
 
 A bug where the Shelf doesn't open, or looks wrong, but loses nothing, is an ordinary [bug report](https://github.com/Tech-Reign-Era-Services/ledge/issues/new/choose).
 
