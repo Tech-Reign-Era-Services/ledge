@@ -54,7 +54,7 @@ Useful while working:
 
 ## Ground rules
 
-1. **Never touch the files.** The Shelf only points to files. It never copies, moves, renames or deletes them.
+1. **Never touch the files.** The Shelf only points to files. It never copies, moves, renames or deletes them. The one kind of file Ledge writes is its own: pictures pasted onto the Shelf (clippings), kept in `Clips/` in its data folder and deleted when they leave the Shelf. Only files there are ever deleted.
 2. **Almost no network.** Ledge makes exactly two kinds of request: the album artwork of the song Spotify is playing, and the update check (GitHub's latest release, then its installer, checked against its SHA-256 digest). Neither sends anything about you or your Shelf. Don't add others.
 3. **Stay small and light.** No dependencies. `./build.sh check` fails if the app grows past its size budget, and CI runs it. Don't add work that runs while the Shelf is idle: nothing polls unless a mouse button is down or the island is open.
 4. **Treat live activities as untrusted.** Any app on the Mac can post one. New fields get validated and trimmed in `Activities.parse`, with a test, and links never reach the page.

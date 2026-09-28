@@ -10,6 +10,7 @@ A Shelf in your Mac's notch. Keep files, text and links there for a moment, then
 
 - **Hover** over the notch to peek, **drag** anything toward it to drop it in, or press **⌃⌥S** to open it.
 - Drag items out to Finder, Mail, Slack or a browser upload box. Or select them, press **⌘C**, and **⌘V** anywhere.
+- **Text with pictures:** copy from Notes, Mail, TextEdit, Pages or Safari, then **⌘V** in the Shelf. The text becomes notes and each picture becomes an image file, in order. Remote desktops like AnyDesk pass files but not pictures inside text, so copy the pictures from the Shelf (**⌘C**) and paste them on the other computer.
 - **Space** opens Quick Look, just like in Finder. **⌘V** in the Shelf adds whatever is on the clipboard.
 - **Quick notes:** click the notch and start typing. **⏎** keeps the note on the Shelf (**⇧⏎** for a new line, **Esc** to cancel); drag it out, **⌘C** it, or **×** it away when you're done.
 - Files are kept by reference: never copied, never moved. On a Mac without a notch, the Shelf sits in the middle of the menu bar.
@@ -132,7 +133,7 @@ docs/               the demo video and screenshots in this README (not part of t
 site/               the web page, published to GitHub Pages by .github/workflows/pages.yml
 ```
 
-Items are saved in `~/Library/Application Support/Ledge/shelf.json`.
+Items are saved in `~/Library/Application Support/Ledge/shelf.json`, and pasted pictures in `Clips/` beside it.
 
 For development, `LEDGE_DATA_DIR=/tmp/ledge-dev` keeps a dev build's Shelf apart from your real one, `LEDGE_DEBUG=1` logs state changes, `LEDGE_NO_NOTCH=1` behaves as on a screen without a notch, and `LEDGE_SNAPSHOT=out.png LEDGE_STATE=open` draws the island
 to a PNG and quits. See [CONTRIBUTING.md](CONTRIBUTING.md) to help out.

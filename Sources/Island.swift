@@ -27,6 +27,8 @@ final class IslandPanel: NSPanel {
 /// paths of dropped files (a page never sees them), and remembers the mouse event a file drag starts from.
 final class IslandWebView: WKWebView {
     var onFileDrop: (([String]) -> Void)?
+    var onClipDrop: (([ClipPart]) -> Void)? // text with pictures in it: the page would only see its text
+    private(set) var clipDropAt = 0.0
     private(set) var lastMouse: NSEvent?
     private var hover: NSTrackingArea?
 
@@ -52,6 +54,7 @@ final class IslandWebView: WKWebView {
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         let paths = Clipboard.fileURLs(on: sender.draggingPasteboard)
         if !paths.isEmpty { onFileDrop?(paths) }
+        else if let parts = Clipboard.parts(on: sender.draggingPasteboard) { clipDropAt = CACurrentMediaTime(); onClipDrop?(parts) }
         return super.performDragOperation(sender) || !paths.isEmpty // the page still gets its drop, for the swallow
     }
 }
@@ -104,6 +107,7 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
     private var prefsWork: DispatchWorkItem?
     private var watchTimer: Timer?
     private var keysTimer: Timer?
+    private var screensAsleep = false
     private let drags = DragWatch()
     private let levels = AudioLevels()
     private let preview = Preview()
@@ -122,6 +126,7 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
         web.setValue(false, forKey: "drawsBackground") // transparent: only the island is drawn
         web.navigationDelegate = self
         web.onFileDrop = { [weak self] paths in self?.addFiles(paths) }
+        web.onClipDrop = { [weak self] parts in if let self, !self.store.addClips(parts).isEmpty { self.changed() } }
 
         panel = IslandPanel(contentRect: NSRect(x: 0, y: 0, width: 200, height: 32),
                             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -158,6 +163,10 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
         }
         NotificationCenter.default.addObserver(self, selector: #selector(prefsChanged), name: UserDefaults.didChangeNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(screensChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        // With the display off, nobody sees the bars: let go of the audio tap, which would keep the Mac awake.
+        let ws = NSWorkspace.shared.notificationCenter
+        ws.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main) { [weak self] _ in self?.screensAsleep = true; self?.followMusic() }
+        ws.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main) { [weak self] _ in self?.screensAsleep = false; self?.followMusic() }
 
         measure()
         web.load(URLRequest(url: Island.pageURL))
@@ -184,7 +193,7 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
 
     private func followMusic() {
         let music = activities.list.first { $0.kind == "music" && $0.playing == true }
-        levels.follow(Prefs.realBars ? music?.bundleID : nil)
+        levels.follow(Prefs.realBars && !screensAsleep ? music?.bundleID : nil)
     }
 
     /// Read the notch again (screens changed), then reposition.
@@ -438,12 +447,15 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
             if n > 0 { changed() }
             reply(n, nil)
         case "addText":
+            // The page's half of a drop the app already took apart into text and pictures.
+            if CACurrentMediaTime() - web.clipDropAt < 2 { return reply(0, nil) }
             let n = store.addText(string(0)).count
             if n > 0 { changed() }
             reply(n, nil)
         case "paste":
             let files = Clipboard.files()
-            let n = files.isEmpty ? store.addText(Clipboard.text() ?? "").count : store.addFiles(files).count
+            let n = !files.isEmpty ? store.addFiles(files).count
+                : Clipboard.parts(on: .general).map { store.addClips($0).count } ?? store.addText(Clipboard.text() ?? "").count
             if n > 0 { changed() }
             reply(n, nil)
         case "remove":
@@ -457,6 +469,7 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
             let ids = strings(0)
             let files = existingFiles(ids)
             // The clipboard holds files or text, not both: files win, as they're what the Shelf is mostly for.
+            if files.count == 1, files[0].clip == true, let p = files[0].path { return reply(["count": Clipboard.copyImage(p) ? 1 : 0, "kind": "image"], nil) }
             if !files.isEmpty { return reply(["count": Clipboard.copyFiles(files.compactMap(\.path)) ? files.count : 0, "kind": "files"], nil) }
             let texts = store.get(ids).filter { $0.kind != "file" }.compactMap(\.text)
             if texts.isEmpty { return reply(["count": 0], nil) }

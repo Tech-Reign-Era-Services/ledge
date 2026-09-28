@@ -224,6 +224,40 @@ test("the list: music first, newest next, at most four from apps, expired ones g
     eq(Activities.prune(list, now: t0), nil, "nothing changed")
 }
 
+test("text with pictures becomes notes and clippings, in reading order, and clippings are deleted with their items") {
+    let dir = tmp()
+    let shelf = ShelfStore(dir: dir)
+    let png = Data([0x89, 0x50, 0x4E, 0x47, 1, 2, 3])
+    let added = shelf.addClips([.text("Intro"), .image(png, ext: "png"), .text("  \n "), .text("Middle"), .image(Data([0xFF, 0xD8, 0xFF, 9]), ext: "jpg"), .image(png, ext: "exe")])
+    eq(added.map(\.name), ["Intro", "Image 1.png", "Middle", "Image 2.jpg"], "blank text and odd files are left out")
+    eq(shelf.items.map(\.name), ["Intro", "Image 1.png", "Middle", "Image 2.jpg"], "the first piece leftmost")
+    let img = shelf.items[1]
+    eq(img.kind, "file"); eq(img.clip, true)
+    eq(try Data(contentsOf: URL(fileURLWithPath: img.path!)), png, "written to Ledge's own folder")
+    check(img.path!.hasPrefix(dir.appendingPathComponent("Clips").path))
+    eq(ShelfStore(dir: dir).items, shelf.items, "survives a restart")
+
+    shelf.remove([img.id])
+    check(!FileManager.default.fileExists(atPath: img.path!), "removing it deletes the file")
+    check(!FileManager.default.fileExists(atPath: (img.path! as NSString).deletingLastPathComponent), "and its folder")
+
+    // A user's own file is never deleted, however it leaves the Shelf.
+    let mine = dir.appendingPathComponent("mine.png")
+    write(mine, "x")
+    shelf.addFiles([mine.path])
+    let jpg = shelf.items.first { $0.name == "Image 2.jpg" }!.path!
+    shelf.clear()
+    check(FileManager.default.fileExists(atPath: mine.path), "the user's file stays")
+    check(!FileManager.default.fileExists(atPath: jpg), "clippings go with Clear")
+
+    // Clippings nobody points to any more (removed while Ledge wasn't running) are cleaned up on the next start.
+    shelf.addClips([.image(png, ext: "png")])
+    let orphan = shelf.items[0].path!
+    write(dir.appendingPathComponent("shelf.json"), #"{"items":[]}"#)
+    _ = ShelfStore(dir: dir)
+    check(!FileManager.default.fileExists(atPath: orphan))
+}
+
 test("versions") {
     check(Updates.isNewer("1.3.1", than: "1.3.0"))
     check(Updates.isNewer("1.10.0", than: "1.9.2"), "compared as numbers, not text")

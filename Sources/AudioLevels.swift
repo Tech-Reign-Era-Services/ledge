@@ -63,9 +63,12 @@ final class AudioLevels {
         guard #available(macOS 14.2, *), let t = tap as? ProcessTap else { return }
         guard let energy = t.take() else { return } // no audio since the last tick
         // Pure silence for a couple of seconds usually means the permission was refused: fall back to the animation.
+        // A few seconds more (or a player that went away without saying so), and let go of the tap altogether: while
+        // it runs, Core Audio keeps the Mac from sleeping. It starts again when the music does.
         if energy.allSatisfy({ $0 == 0 }) {
             quiet += 1
             if quiet == 60 { onLevels?(nil) }
+            if quiet == 240 { let id = bundleID; stop(); bundleID = id } // same id: follow() won't restart it until the music changes
             return
         }
         quiet = 0

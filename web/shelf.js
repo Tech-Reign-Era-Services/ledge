@@ -184,7 +184,7 @@ function thumbFor(it) {
 const tiles = new Map(); // item id → its tile, kept between renders so only real changes animate
 
 function makeTile(it) {
-  const title = it.kind === 'file' ? it.path : it.text.slice(0, 400);
+  const title = it.clip ? `${it.name}, pasted onto the Shelf` : it.kind === 'file' ? it.path : it.text.slice(0, 400);
   return h('div', {
     class: 'tile', role: 'option', title, draggable: 'true',
     onmousedown: (e) => {
@@ -242,7 +242,7 @@ const targetIds = () => (S.selected.size ? [...S.selected] : S.items.map((x) => 
 async function copy(ids) {
   const res = await api.copy(ids);
   if (!res || !res.count) return;
-  const what = res.kind === 'files' ? plural(res.count, 'file') : res.count === 1 ? 'the text' : plural(res.count, 'snippet');
+  const what = res.kind === 'image' ? 'the picture' : res.kind === 'files' ? plural(res.count, 'file') : res.count === 1 ? 'the text' : plural(res.count, 'snippet');
   S.copied = true;
   renderHead();
   say(h('span', {}, h('span', { class: 'good' }, icon('check', 12)), `Copied ${what}. Press `, h('kbd', {}, '⌘V'), ' where you want it.'), 2600);

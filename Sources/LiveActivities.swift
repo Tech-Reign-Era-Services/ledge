@@ -29,6 +29,14 @@ final class ActivityCenter {
                 self?.music(info, app: p.app, bundleID: p.bundleID)
             }
         }
+        // A player that quits doesn't always say it stopped (Spotify often doesn't): its song goes when it does, or the
+        // island would show it forever, and the music bars would keep listening, and the Mac awake.
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) { [weak self] n in
+            guard let self, let app = n.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  let id = app.bundleIdentifier, self.list.first(where: { $0.id == "music" })?.bundleID == id || self.pending?.bundleID == id else { return }
+            self.pending = nil; self.pendingWork?.cancel()
+            self.end("music")
+        }
         // The players only announce changes: ask the ones already running what's playing now.
         for p in ActivityCenter.players where NSRunningApplication.runningApplications(withBundleIdentifier: p.bundleID).count > 0 {
             Artwork.nowPlaying(bundleID: p.bundleID) { [weak self] info in
