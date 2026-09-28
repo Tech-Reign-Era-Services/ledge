@@ -2,6 +2,10 @@
 
 What's new in each release, newest first. Written for people using Ledge, not for developers.
 
+## Unreleased
+
+- **Update from inside Ledge.** Choose **Check for Updates…** in the menu bar icon, or let Ledge check once a day (Settings → Updates). A new version shows in the island: click it, and Ledge downloads the installer, makes sure it's exactly the one on GitHub, and opens it. Ledge quits, updates and opens again, and what's on your Shelf is kept.
+
 ## 1.3.0
 
 - **Quick notes.** Click the notch and start typing: a note box opens straight away. Press ⏎ to keep the note on the Shelf, ⇧⏎ for a new line, or Esc to cancel. Kept notes work like any text on the Shelf: drag them out, ⌘C, or × to clean them up. There's also a pen button beside Copy all.

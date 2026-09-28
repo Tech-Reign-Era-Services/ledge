@@ -8,6 +8,7 @@ import ServiceManagement
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var island: Island!
     private let activities = ActivityCenter()
+    private lazy var updater = Updater(activities: activities)
     private var hotKey: HotKey?
     private var statusItem: NSStatusItem!
     private let menu = NSMenu()
@@ -28,6 +29,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         activities.onChange = { [weak self] _ in self?.island.activitiesChanged() }
         activities.start()
         island.onChange = { [weak self] in self?.refreshIcon() }
+        settings.checkForUpdates = { [weak self] in self?.updater.check(manual: true) }
+        updater.start()
 
         hotKey = HotKey(keyCode: kVK_ANSI_S, modifiers: controlKey | optionKey) { [weak self] in self?.island.toggle() }
 
@@ -53,6 +56,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// ledge://activity?… and ledge://activity/end?… start, update and end another app's live activity.
     func application(_ sender: NSApplication, open urls: [URL]) {
         if urls.contains(where: { $0.scheme == "ledge" && $0.host == "settings" }) { settings.show() } // ledge://settings
+        // ledge://update: the update in the island was clicked. Only ever a release checked in Updates.parse, newer than this one.
+        if urls.contains(where: { $0.scheme == "ledge" && $0.host == "update" }) { updater.install() }
         for url in urls where url.scheme == "ledge" && url.host == "activity" {
             let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
             let fields = items.reduce(into: [String: String]()) { d, q in if let v = q.value { d[q.name] = v } }
@@ -79,6 +84,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
         menu.addItem(NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ","))
+        let update = updater.available.map { "Update to Ledge \($0.version)…" } ?? (updater.busy ? "Checking for Updates…" : "Check for Updates…")
+        menu.addItem(NSMenuItem(title: update, action: updater.busy ? nil : #selector(checkForUpdates), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "About Ledge", action: #selector(about), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Quit Ledge", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -88,6 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func showShelf() { island.show() }
     @objc private func showSettings() { settings.show() }
     @objc private func clearShelf() { island.clear() }
+    @objc private func checkForUpdates() { if updater.available != nil { updater.install() } else { updater.check(manual: true) } }
 
     @objc private func toggleLogin() {
         let service = SMAppService.mainApp

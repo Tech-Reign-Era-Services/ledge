@@ -224,5 +224,47 @@ test("the list: music first, newest next, at most four from apps, expired ones g
     eq(Activities.prune(list, now: t0), nil, "nothing changed")
 }
 
+test("versions") {
+    check(Updates.isNewer("1.3.1", than: "1.3.0"))
+    check(Updates.isNewer("1.10.0", than: "1.9.2"), "compared as numbers, not text")
+    check(Updates.isNewer("2", than: "1.9.9"))
+    check(!Updates.isNewer("1.3.0", than: "1.3.0"))
+    check(!Updates.isNewer("1.3", than: "1.3.0"), "1.3 is 1.3.0")
+    check(!Updates.isNewer("1.2.9", than: "1.3.0"))
+    check(!Updates.isNewer("1.4.0-beta", than: "1.3.0"), "not a version: never newer")
+    check(!Updates.isNewer("", than: "1.3.0"))
+    check(Updates.due(lastCheck: 0, now: 100_000))
+    check(!Updates.due(lastCheck: 100_000, now: 100_000 + 3600), "once a day at most")
+    check(Updates.due(lastCheck: 200_000, now: 100_000), "the clock went back")
+}
+
+test("only a proper release of Ledge is an update") {
+    let sha = String(repeating: "ab", count: 32)
+    func release(tag: String = "v1.4.0", name: String = "Ledge-1.4.0.pkg", url: String = "https://github.com/Tech-Reign-Era-Services/ledge/releases/download/v1.4.0/Ledge-1.4.0.pkg",
+                 size: Int = 640_000, digest: String? = nil, draft: Bool = false, prerelease: Bool = false) -> Data {
+        var asset: [String: Any] = ["name": name, "browser_download_url": url, "size": size]
+        asset["digest"] = digest ?? "sha256:\(sha)"
+        let other: [String: Any] = ["name": "Ledge-1.4.0.zip", "browser_download_url": "https://github.com/x.zip", "size": 1, "digest": "sha256:\(sha)"]
+        return try! JSONSerialization.data(withJSONObject: ["tag_name": tag, "draft": draft, "prerelease": prerelease,
+                                                            "html_url": "https://github.com/Tech-Reign-Era-Services/ledge/releases/tag/\(tag)", "assets": [other, asset]])
+    }
+    let r = Updates.parse(release())
+    eq(r?.version, "1.4.0")
+    eq(r?.pkg.absoluteString, "https://github.com/Tech-Reign-Era-Services/ledge/releases/download/v1.4.0/Ledge-1.4.0.pkg")
+    eq(r?.sha256, sha)
+    eq(r?.size, 640_000)
+    eq(Updates.parse(release(url: "https://evil.example/Ledge-1.4.0.pkg")), nil, "only from this repository's downloads")
+    eq(Updates.parse(release(url: "http://github.com/Tech-Reign-Era-Services/ledge/releases/download/v1.4.0/Ledge-1.4.0.pkg")), nil, "only https")
+    eq(Updates.parse(release(url: "https://github.com/someone/else/releases/download/v1.4.0/Ledge-1.4.0.pkg")), nil, "not another repository")
+    eq(Updates.parse(release(name: "Ledge-1.3.9.pkg")), nil, "the installer matches the tag")
+    eq(Updates.parse(release(digest: "")), nil, "needs a digest to check the download against")
+    eq(Updates.parse(release(digest: "sha256:xyz")), nil)
+    eq(Updates.parse(release(size: 90_000_000)), nil, "far too big to be Ledge")
+    eq(Updates.parse(release(tag: "nightly")), nil)
+    eq(Updates.parse(release(draft: true)), nil)
+    eq(Updates.parse(release(prerelease: true)), nil)
+    eq(Updates.parse(Data("{}".utf8)), nil)
+}
+
 print(failures == 0 ? "\nall passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

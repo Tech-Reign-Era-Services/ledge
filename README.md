@@ -25,6 +25,7 @@ Drag something toward the notch and the Shelf opens to take it. Closed, it shows
 
 - **Music:** while Apple Music or Spotify plays, the island shows the album artwork and bars that move to the music itself: bass to treble, from the player's own audio (macOS 14.2 or later; macOS asks once for System Audio Recording, and nothing is recorded or saved). Hover over the island for the song, a progress bar, and play, pause and skip.
 - **Other apps** can show what they're doing, like a build, an upload or a timer, with a title, a symbol or emoji, progress, and a few characters beside the island. See [Show your app in the island](#show-your-app-in-the-island).
+- **Updates from the app:** Ledge checks GitHub for a new release once a day (turn it off in Settings), or choose **Check for Updates…** in the menu bar icon. A new version shows in the island: click it, and Ledge downloads the installer, checks it against GitHub's SHA-256 digest, and opens it. What's on your Shelf is kept.
 - **Settings…** in the menu bar icon (or ⌘,, or `open ledge://settings`): make the pill wider, taller or lower, the open island wider, open on hover or only on a click, and choose the music bars' colour. Changes show on the pill as you make them.
 - **No notch? No problem.** On an external display, or any Mac without a notch, the island is a floating pill in the middle of the menu bar that appears when something is live or on the Shelf, and grows out of itself when you hover.
 
@@ -122,8 +123,10 @@ Sources/
   Native.swift      drag detection, the global shortcut, thumbnails, clipboard, Quick Look
   Layout.swift      where the island sits for each state (no AppKit, tested)
   ShelfStore.swift  the items and shelf.json (no AppKit, tested)
+  Updates.swift     what counts as a newer release on GitHub (no AppKit, tested)
+  Updater.swift     checking for updates, downloading and checking the installer, opening it
 web/                the island itself: shelf.html, shelf.css, shelf.js (from Inlet), bridge.js
-tests/main.swift    tests for Layout, ShelfStore and Activities
+tests/main.swift    tests for Layout, ShelfStore, Activities and Updates
 scripts/            the icon, and the installer's pre/postinstall scripts
 docs/               the demo video and screenshots in this README (not part of the app)
 site/               the web page, published to GitHub Pages by .github/workflows/pages.yml
