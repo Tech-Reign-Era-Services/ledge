@@ -1,7 +1,10 @@
 import Foundation
 
 // What's on the Shelf. Files are kept by reference (never copied or moved); text and links are stored here.
-// Foundation only, so tests/ can compile it without AppKit. The file format is the one Inlet's Shelf used.
+// Pictures pasted in (from a note or a web page, with text around them) become clippings: image files Ledge writes
+// in its own Clips folder and deletes when they leave the Shelf, so they can go wherever files go (a remote desktop
+// passes files, but not pictures inside text). Foundation only, so tests/ can compile it without AppKit. The file
+// format is the one Inlet's Shelf used.
 
 struct ShelfItem: Codable, Equatable {
     var id: String
@@ -11,18 +14,34 @@ struct ShelfItem: Codable, Equatable {
     var isDir: Bool?
     var text: String?
     var addedAt: Double
+    var clip: Bool? = nil // a clipping: Ledge's own file in Clips/<id>/, deleted with the item
+}
+
+/// A piece of what was pasted or dropped, in reading order.
+enum ClipPart: Equatable {
+    case text(String)
+    case image(Data, ext: String) // "png" or "jpg"
 }
 
 final class ShelfStore {
     static let maxItems = 100
     static let maxText = 20000 // characters kept from one text drop
+    static let maxClips = 30 // pictures kept from one paste
+    static let maxClipSize = 40_000_000
 
     let file: URL
+    let clips: URL // Clips/<item id>/Image 1.png
     private(set) var items: [ShelfItem] = []
 
     init(dir: URL) {
         file = dir.appendingPathComponent("shelf.json")
+        clips = dir.appendingPathComponent("Clips")
         items = ShelfStore.load(file)
+        // Clippings whose item is gone (removed while Ledge wasn't running, or a damaged shelf.json): delete them.
+        let kept = Set(items.filter { $0.clip == true }.map(\.id))
+        for name in (try? FileManager.default.contentsOfDirectory(atPath: clips.path)) ?? [] where !kept.contains(name) {
+            try? FileManager.default.removeItem(at: clips.appendingPathComponent(name))
+        }
     }
 
     static func load(_ file: URL) -> [ShelfItem] {
@@ -78,35 +97,73 @@ final class ShelfStore {
         return commit([item])
     }
 
+    /// Add what was pasted: its text as notes and its pictures as clippings, left to right in reading order.
+    @discardableResult
+    func addClips(_ parts: [ClipPart]) -> [ShelfItem] {
+        var added: [ShelfItem] = []
+        var images = 0
+        for part in parts {
+            switch part {
+            case .text(let raw):
+                let text = String(raw.prefix(ShelfStore.maxText))
+                guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+                added.append(ShelfItem(id: ShelfStore.newId(), kind: "text", name: ShelfStore.firstLine(text), path: nil, isDir: nil, text: text, addedAt: ShelfStore.now()))
+            case .image(let data, let ext):
+                guard images < ShelfStore.maxClips, !data.isEmpty, data.count <= ShelfStore.maxClipSize, ["png", "jpg"].contains(ext) else { continue }
+                images += 1
+                let id = ShelfStore.newId(), name = "Image \(images).\(ext)"
+                let folder = clips.appendingPathComponent(id), url = folder.appendingPathComponent(name)
+                do {
+                    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                    try data.write(to: url)
+                } catch { continue }
+                added.append(ShelfItem(id: id, kind: "file", name: name, path: url.path, isDir: false, text: nil, addedAt: ShelfStore.now(), clip: true))
+            }
+        }
+        let texts = Set(added.compactMap(\.text))
+        items.removeAll { $0.kind != "file" && texts.contains($0.text ?? "") }
+        items.insert(contentsOf: added, at: 0) // the first piece leftmost, where the newest goes
+        return commit(added)
+    }
+
     @discardableResult
     func remove(_ ids: [String]) -> Int {
         let drop = Set(ids)
-        let before = items.count
+        let gone = items.filter { drop.contains($0.id) }
         items.removeAll { drop.contains($0.id) }
-        if items.count != before { save() }
-        return before - items.count
+        if !gone.isEmpty { save(); discard(gone) }
+        return gone.count
     }
 
     @discardableResult
     func clear() -> Int {
-        let n = items.count
+        let gone = items
         items = []
         save()
-        return n
+        discard(gone)
+        return gone.count
+    }
+
+    /// Delete the clippings among these items. Only ever Ledge's own files, in Clips/.
+    private func discard(_ gone: [ShelfItem]) {
+        for it in gone where it.clip == true && it.id.range(of: #"^[0-9a-f]{12}$"#, options: .regularExpression) != nil {
+            try? FileManager.default.removeItem(at: clips.appendingPathComponent(it.id))
+        }
     }
 
     /// Forget files that are gone (moved away by dragging them into Finder, or deleted). True if anything changed.
     @discardableResult
     func prune(exists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }) -> Bool {
-        let before = items.count
+        let gone = items.filter { $0.kind == "file" && !exists($0.path ?? "") }
+        if gone.isEmpty { return false }
         items.removeAll { $0.kind == "file" && !exists($0.path ?? "") }
-        if items.count == before { return false }
         save()
+        discard(gone) // a clipping dragged into a Finder folder moved there: its empty folder goes
         return true
     }
 
     private func commit(_ added: [ShelfItem]) -> [ShelfItem] {
-        if items.count > ShelfStore.maxItems { items.removeLast(items.count - ShelfStore.maxItems) }
+        if items.count > ShelfStore.maxItems { discard(Array(items.suffix(items.count - ShelfStore.maxItems))); items.removeLast(items.count - ShelfStore.maxItems) }
         if !added.isEmpty { save() }
         return added
     }

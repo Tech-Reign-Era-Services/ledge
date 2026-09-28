@@ -159,6 +159,19 @@ enum Clipboard {
         return pb.writeObjects(paths.map { URL(fileURLWithPath: $0) as NSURL })
     }
 
+    /// One picture: the file, and the picture itself, for apps that take a picture but not a file. Which one a
+    /// remote desktop sends across is up to it.
+    static func copyImage(_ path: String) -> Bool {
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let rep = NSBitmapImageRep(data: data) else { return copyFiles([path]) }
+        let item = NSPasteboardItem()
+        item.setString(URL(fileURLWithPath: path).absoluteString, forType: .fileURL)
+        if let png = path.hasSuffix(".png") ? data : rep.representation(using: .png, properties: [:]) { item.setData(png, forType: .png) }
+        if let tiff = rep.tiffRepresentation { item.setData(tiff, forType: .tiff) }
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        return pb.writeObjects([item])
+    }
+
     static func copyText(_ text: String) {
         let pb = NSPasteboard.general
         pb.clearContents()
@@ -169,6 +182,52 @@ enum Clipboard {
     static func files() -> [String] { fileURLs(on: NSPasteboard.general) }
 
     static func text() -> String? { NSPasteboard.general.string(forType: .string) }
+
+    /// Text with pictures in it (from Notes, TextEdit, Mail, Pages, Safari…), or just a picture, as pieces in reading
+    /// order. nil when there's no picture: that's ordinary text. Only formats that carry their pictures are read
+    /// (RTFD, web archives, images), never HTML that links to them: that would mean downloading.
+    static func parts(on pb: NSPasteboard) -> [ClipPart]? {
+        if !fileURLs(on: pb).isEmpty { return nil }
+        var parts: [ClipPart] = []
+        if let d = pb.data(forType: .rtfd) ?? pb.data(forType: NSPasteboard.PasteboardType("com.apple.flat-rtfd")),
+           let rich = NSAttributedString(rtfd: d, documentAttributes: nil) {
+            var text = ""
+            rich.enumerateAttribute(.attachment, in: NSRange(location: 0, length: rich.length)) { value, range, _ in
+                if let a = value as? NSTextAttachment, let picture = image(a.fileWrapper?.regularFileContents) ?? image(a.contents) {
+                    if !text.isEmpty { parts.append(.text(text)); text = "" }
+                    parts.append(picture)
+                } else {
+                    text += rich.attributedSubstring(from: range).string.replacingOccurrences(of: "\u{FFFC}", with: "")
+                }
+            }
+            if !text.isEmpty { parts.append(.text(text)) }
+        } else if let d = pb.data(forType: NSPasteboard.PasteboardType("com.apple.webarchive")),
+                  let archive = try? PropertyListSerialization.propertyList(from: d, format: nil) as? [String: Any] {
+            // A web archive holds the page's pictures, but placing them in the text would mean reading its HTML:
+            // the text as one note, then its pictures in the order the page uses them.
+            if let t = pb.string(forType: .string) { parts.append(.text(t)) }
+            let html = ((archive["WebMainResource"] as? [String: Any])?["WebResourceData"] as? Data).flatMap { String(data: $0, encoding: .utf8) } ?? ""
+            let subs = (archive["WebSubresources"] as? [[String: Any]] ?? []).filter { ($0["WebResourceMIMEType"] as? String ?? "").hasPrefix("image/") }
+            let order = { (s: [String: Any]) -> Int in
+                guard let u = s["WebResourceURL"] as? String, let r = html.range(of: u) else { return Int.max }
+                return html.distance(from: html.startIndex, to: r.lowerBound)
+            }
+            for s in subs.sorted(by: { order($0) < order($1) }) where order(s) != Int.max {
+                if let p = image(s["WebResourceData"] as? Data) { parts.append(p) }
+            }
+        } else if let p = image(pb.data(forType: .png) ?? pb.data(forType: .tiff)) {
+            parts.append(p) // just a picture: a screenshot, or copied from Preview or Photos
+        }
+        return parts.contains(where: { if case .image = $0 { return true } else { return false } }) ? parts : nil
+    }
+
+    /// A picture as a PNG or JPEG file's bytes. JPEGs stay as they are; anything else (TIFF, HEIC, GIF…) becomes PNG.
+    private static func image(_ data: Data?) -> ClipPart? {
+        guard let data, !data.isEmpty, data.count <= ShelfStore.maxClipSize, let rep = NSBitmapImageRep(data: data) else { return nil }
+        if data.starts(with: [0xFF, 0xD8, 0xFF]) { return .image(data, ext: "jpg") }
+        if data.starts(with: [0x89, 0x50, 0x4E, 0x47]) { return .image(data, ext: "png") }
+        return rep.representation(using: .png, properties: [:]).map { .image($0, ext: "png") }
+    }
 
     static func fileURLs(on pb: NSPasteboard) -> [String] {
         let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
