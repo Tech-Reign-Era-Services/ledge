@@ -6,6 +6,7 @@
 const api = window.shelf;
 const $ = (id) => document.getElementById(id);
 const body = document.body;
+const note = $('note');
 
 const S = {
   state: 'closed',
@@ -18,6 +19,7 @@ const S = {
   dragOut: false, // dragging something out of the Shelf (so it isn't taken as a drop onto it)
   shown: false, // the first list has been drawn: later additions animate in
   previewing: null, // id of the item open in Quick Look
+  writing: false, // a quick note is being written (its draft stays in the box if the Shelf closes)
 };
 const timers = {};
 const later = (name, ms, fn) => { clearTimeout(timers[name]); timers[name] = setTimeout(fn, ms); };
@@ -74,7 +76,8 @@ function applyState({ state, layout }) {
     body.classList.remove('dragging');
     renderItems();
   }
-  if (state === 'open') $('tray').focus();
+  if (!open && !note.value.trim()) endNote();
+  if (state === 'open') (S.writing ? note : $('tray')).focus();
 }
 
 /** Opening: the items rise into place one after another. */
@@ -104,8 +107,11 @@ island.addEventListener('mouseenter', () => {
   cancel('close');
   if (S.state === 'closed' && S.prefs.hoverOpen) later('peek', S.prefs.hoverDelay, () => S.hover && setState('peek'));
 });
-// Set not to open on hover: a click opens it.
-island.addEventListener('mousedown', () => { if (S.state === 'closed') setState('open'); });
+// Set not to open on hover: a click opens it. A click on a peeking island opens it too, with the keyboard, ready to
+// type a note (tiles and buttons keep their own clicks, so dragging a file out still closes it when you leave).
+island.addEventListener('mousedown', (e) => {
+  if (S.state === 'closed' || (S.state === 'peek' && !e.target.closest('.tile, button, .now-row'))) setState('open');
+});
 island.addEventListener('mouseleave', () => {
   S.hover = false;
   cancel('peek');
@@ -256,10 +262,11 @@ function renderHint() {
   const n = S.items.length;
   const k = (key) => h('kbd', {}, key);
   let el = spoken;
-  if (!el && S.previewing) el = h('span', {}, k('Space'), ' closes the preview · ', k('←'), k('→'), ' previews the next one');
+  if (!el && S.writing) el = h('span', {}, k('⏎'), ' to keep it on the Shelf · ', k('⇧⏎'), ' new line · ', k('Esc'), ' to cancel');
+  else if (!el && S.previewing) el = h('span', {}, k('Space'), ' closes the preview · ', k('←'), k('→'), ' previews the next one');
   else if (!el && S.selected.size) el = h('span', {}, k('Space'), ' to preview · ', k('⌘C'), ' to copy · ', k('⌫'), ' to remove · or drag it out');
   else if (!el && n) el = h('span', {}, 'Drag out, or ', k('⌘C'), ' then ', k('⌘V'), ' anywhere · select and ', k('Space'), ' to preview');
-  else if (!el) el = h('span', {}, 'Drag things here, or copy and press ', k('⌘V'));
+  else if (!el) el = h('span', {}, 'Drag things here, start typing a note, or copy and press ', k('⌘V'));
   const hint = $('hint');
   if (hint.firstChild && hint.firstChild.textContent === el.textContent) return; // unchanged: don't replay its entrance
   hint.replaceChildren(el);
@@ -269,7 +276,15 @@ function renderHead() {
   const n = S.items.length;
   const sel = S.selected.size;
   setCount($('count'), n ? String(n) : '');
+  if (S.writing) {
+    $('actions').replaceChildren(
+      h('button', { class: 'act', title: 'Put the note on the Shelf (⏎)', onclick: keepNote }, icon('check', 13), 'Keep'),
+      h('button', { class: 'act quiet', title: 'Throw the note away (Esc)', onclick: endNote }, icon('x', 13), 'Cancel'));
+    return;
+  }
   $('actions').replaceChildren(
+    // With a selection, Copy and Remove need the room; typing still starts a note.
+    !sel && h('button', { class: 'act only', title: 'Write a quick note (or just start typing)', 'aria-label': 'New note', onclick: () => startNote() }, icon('pen', 13)),
     h('button', { class: `act ${S.copied ? 'done' : ''}`, disabled: !n, title: 'Put these on the clipboard, then ⌘V anywhere', onclick: () => copy(targetIds()) },
       icon(S.copied ? 'check' : 'copy', 13), S.copied ? 'Copied' : sel ? `Copy ${sel}` : 'Copy all'),
     h('button', { class: 'act quiet', disabled: !n, title: sel ? 'Remove the selected items (⌫)' : 'Empty the Shelf. Your files stay where they are.', onclick: () => { if (sel) api.remove([...S.selected]); else api.clear(); } },
@@ -312,7 +327,7 @@ function renderItems() {
       tray.replaceChildren(h('div', { class: 'empty' },
         h('div', { class: 'empty-art' }, icon('plus', 16)),
         h('b', {}, 'Nothing on the Shelf'),
-        h('span', {}, 'Keep files, text and links here for a moment.')));
+        h('span', {}, 'Keep files, text and links here for a moment, or start typing a note.')));
     }
     updateFades();
     return;
@@ -396,6 +411,61 @@ function updateFades() {
   wrap.classList.toggle('more-r', tray.scrollLeft + tray.clientWidth < tray.scrollWidth - 4);
 }
 
+// ---------- quick notes: open the Shelf and start typing ----------
+
+/** Show the note box, with what was typed so far. */
+function startNote(text = '') {
+  if (S.previewing) closePreview();
+  if (!S.writing) {
+    S.writing = true;
+    body.classList.add('writing');
+    S.selected.clear();
+    renderItems();
+  }
+  if (S.state === 'peek') setState('open'); // writing: don't close when the pointer wanders off
+  note.focus();
+  if (text) document.execCommand('insertText', false, text);
+}
+
+function endNote() {
+  note.value = '';
+  if (!S.writing) return;
+  S.writing = false;
+  body.classList.remove('writing');
+  renderHead();
+  renderHint();
+  if (S.state === 'open') $('tray').focus();
+}
+
+/** Put the note on the Shelf, as a note like any other text: drag it out, ⌘C it, or × it away. */
+async function keepNote() {
+  const text = note.value;
+  if (!text.trim()) return endNote();
+  endNote();
+  if (await api.addText(text)) say(h('span', {}, h('span', { class: 'good' }, icon('check', 12)), 'Kept on the Shelf'), 1800);
+}
+
+/** Keys in the note box. Ledge has no Edit menu, so the usual editing shortcuts are done here. */
+function noteKey(e) {
+  const cmd = e.metaKey;
+  const selection = () => note.value.slice(note.selectionStart, note.selectionEnd);
+  if (e.key === 'Escape') { e.preventDefault(); endNote(); return; }
+  if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.isComposing) { e.preventDefault(); keepNote(); return; }
+  if (!cmd) return;
+  const k = e.key.toLowerCase();
+  if (k === 'a') { e.preventDefault(); note.select(); }
+  else if (k === 'c' || k === 'x') {
+    e.preventDefault();
+    if (!selection()) return;
+    api.copyText(selection());
+    if (k === 'x') document.execCommand('delete');
+  } else if (k === 'v') {
+    e.preventDefault();
+    api.clipboardText().then((t) => { if (t) document.execCommand('insertText', false, t); });
+  } else if (k === 'z') { e.preventDefault(); document.execCommand(e.shiftKey ? 'redo' : 'undo'); }
+}
+note.addEventListener('keydown', (e) => { e.stopPropagation(); noteKey(e); });
+
 // ---------- keyboard (when the Shelf was opened with the shortcut, or clicked) ----------
 
 // ---------- Quick Look (Space, as in Finder) ----------
@@ -428,6 +498,12 @@ window.addEventListener('blur', () => later('lostKeys', 300, () => { if (S.previ
 const HANDLED = new Set([' ', 'Escape', 'Enter', 'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight']);
 document.addEventListener('keydown', (e) => {
   const cmd = e.metaKey;
+  // Typing a letter, digit or symbol starts a quick note with it (Space stays Quick Look).
+  if (S.state !== 'closed' && e.key.length === 1 && e.key !== ' ' && !cmd && !e.ctrlKey && !e.isComposing) {
+    e.preventDefault();
+    startNote(e.key);
+    return;
+  }
   // Using the keyboard means you're working in the Shelf: don't let it close when the pointer wanders off.
   if (S.state === 'peek' && (HANDLED.has(e.key) || cmd)) setState('open');
   if (e.key === 'Escape') { if (S.previewing) closePreview(); else setState('closed'); return; }

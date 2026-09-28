@@ -2,6 +2,10 @@
 
 What's new in each release, newest first. Written for people using Ledge, not for developers.
 
+## Unreleased
+
+- **Quick notes.** Click the notch and start typing: a note box opens straight away. Press ⏎ to keep the note on the Shelf, ⇧⏎ for a new line, or Esc to cancel. Kept notes work like any text on the Shelf: drag them out, ⌘C, or × to clean them up. There's also a pen button beside Copy all.
+
 ## 1.2.0
 
 - **The music bars move to the music itself.** Each bar follows part of the sound, bass to treble, straight from Apple Music or Spotify. macOS asks once to allow System Audio Recording; nothing is recorded or saved. Needs macOS 14.2 or later; otherwise the bars dance as before.

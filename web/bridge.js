@@ -29,6 +29,8 @@
     closePreview: invoke('closePreview'),
     focus: invoke('focus'),
     icon: invoke('icon'),
+    clipboardText: invoke('clipboardText'), // for ⌘V while writing a note
+    copyText: invoke('copyText'), // …and ⌘C, ⌘X
     activities: invoke('activities'),
     activity: invoke('activity'), // (id, 'playpause' | 'next' | 'previous' | 'open' | 'dismiss')
     setState: send('setState'),

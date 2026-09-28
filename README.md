@@ -11,6 +11,7 @@ A Shelf in your Mac's notch. Keep files, text and links there for a moment, then
 - **Hover** over the notch to peek, **drag** anything toward it to drop it in, or press **⌃⌥S** to open it.
 - Drag items out to Finder, Mail, Slack or a browser upload box. Or select them, press **⌘C**, and **⌘V** anywhere.
 - **Space** opens Quick Look, just like in Finder. **⌘V** in the Shelf adds whatever is on the clipboard.
+- **Quick notes:** click the notch and start typing. **⏎** keeps the note on the Shelf (**⇧⏎** for a new line, **Esc** to cancel); drag it out, **⌘C** it, or **×** it away when you're done.
 - Files are kept by reference: never copied, never moved. On a Mac without a notch, the Shelf sits in the middle of the menu bar.
 
 ![The Shelf open under the notch, with a photo, a PDF, a screenshot, a zip, a note and a link](docs/screenshots/shelf.png)
