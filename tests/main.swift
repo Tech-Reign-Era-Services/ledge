@@ -300,5 +300,101 @@ test("only a proper release of Ledge is an update") {
     eq(Updates.parse(Data("{}".utf8)), nil)
 }
 
+// ---------- the todo list ----------
+
+test("the todo list keeps what's still to do first, and what's ticked off after") {
+    let dir = tmp()
+    let todos = TodoStore(dir: dir)
+    todos.add("  Email   the tax guy\n")
+    todos.add("Renew the domain")
+    todos.add("Pay the invoice")
+    eq(todos.items.map(\.text), ["Email the tax guy", "Renew the domain", "Pay the invoice"], "added in order, as one tidy line")
+    eq(todos.open, 3)
+
+    let domain = todos.items[1].id
+    eq(todos.set(domain, done: true), true)
+    eq(todos.items.map(\.text), ["Email the tax guy", "Pay the invoice", "Renew the domain"], "ticked off, it sinks below the rest")
+    eq(todos.items.map(\.done), [false, false, true])
+    eq(todos.open, 2)
+    eq(todos.set(domain, done: true), false, "ticking it off twice changes nothing")
+
+    eq(todos.set(domain, done: false), true)
+    eq(todos.items.map(\.text), ["Email the tax guy", "Pay the invoice", "Renew the domain"], "put back, it joins the end of the rest")
+    eq(todos.items.map(\.done), [false, false, false])
+
+    // Read back from the file exactly as it was left.
+    eq(TodoStore(dir: dir).items, todos.items)
+}
+
+test("the same todo twice, ticking one off by what it says, and clearing") {
+    let dir = tmp()
+    let todos = TodoStore(dir: dir)
+    let first = todos.add("Water the plants")
+    eq(todos.add("water the PLANTS")?.id, first?.id, "already waiting: the same one comes back, not a second copy")
+    eq(todos.items.count, 1)
+    todos.add("Book the flights")
+    eq(todos.set(first!.id, done: true), true)
+    eq(todos.add("Water the plants")?.done, false, "asked for again after being ticked off: it comes back to do")
+    eq(todos.items.count, 2)
+    eq(todos.open, 2)
+
+    eq(todos.complete("flight")?.text, "Book the flights", "Siri says part of it")
+    eq(todos.items.last?.done, true)
+    eq(todos.complete("flight"), nil, "nothing left waiting that matches")
+    eq(todos.complete("   ") == nil, true)
+
+    eq(todos.clearDone(), 1)
+    eq(todos.items.map(\.text), ["Water the plants"])
+    eq(todos.remove([todos.items[0].id]), 1)
+    eq(todos.clear(), 0)
+    eq(TodoStore(dir: dir).items.count, 0)
+}
+
+test("a todo is one trimmed line, and the list has a cap") {
+    eq(TodoStore.clean(" \n  "), nil)
+    eq(TodoStore.clean("buy\n\tmilk  today "), "buy milk today")
+    eq(TodoStore.clean(String(repeating: "a", count: 500))?.count, TodoStore.maxText)
+    let dir = tmp()
+    let todos = TodoStore(dir: dir)
+    eq(todos.add("   "), nil, "nothing to add")
+    for i in 0..<(TodoStore.maxItems + 20) { todos.add("todo \(i)") }
+    eq(todos.items.count, TodoStore.maxItems)
+}
+
+test("ignores a damaged todo file, and tidies a hand-edited one") {
+    let dir = tmp()
+    write(dir.appendingPathComponent("todos.json"), "{not json")
+    eq(TodoStore(dir: dir).items.count, 0)
+    // A ticked-off one written before a waiting one: the list still reads the right way round.
+    write(dir.appendingPathComponent("todos.json"), #"{"items":[null,{"id":"a"},{"id":"b","text":"done","done":true,"addedAt":1},{"id":"c","text":"to do","done":false,"addedAt":2}]}"#)
+    eq(TodoStore(dir: dir).items.map(\.id), ["c", "b"])
+}
+
+test("the island makes room for the todo list, and counts what is still to do") {
+    let none = Geometry.layout(mbp, notch: mbpNotch, count: 0)
+    let one = Geometry.layout(mbp, notch: mbpNotch, count: 0, todos: 1, waiting: 1)
+    eq(one.todoRows, 1)
+    eq(one.islandOpen.height, none.islandOpen.height + Geometry.todoRow + Geometry.todoGap, "one row taller")
+    eq(one.islandClosed.width, 209 + Geometry.ear * 2 + Geometry.todoEar, "room beside the notch for the tick and the number")
+    check(one.closed.width > none.closed.width, "an empty Shelf with something to do is no longer invisible")
+
+    let many = Geometry.layout(mbp, notch: mbpNotch, count: 0, todos: 9, waiting: 9)
+    eq(many.todoRows, Geometry.maxTodoRows, "past that it scrolls instead of growing")
+    eq(many.islandOpen.height, none.islandOpen.height + Geometry.maxTodoRows * Geometry.todoRow + Geometry.todoGap)
+
+    // Everything ticked off: the rows are still listed, but there is nothing to show beside the notch.
+    let ticked = Geometry.layout(mbp, notch: mbpNotch, count: 0, todos: 2, waiting: 0)
+    eq(ticked.todoRows, 2)
+    eq(ticked.closed, none.closed, "the closed island is exactly the notch again")
+
+    // A live activity and the todo list share the open island.
+    let both = Geometry.layout(mbp, notch: mbpNotch, count: 1, live: true, activities: 1, todos: 2, waiting: 2)
+    eq(both.islandOpen.height, none.islandOpen.height + Geometry.row + 2 * Geometry.todoRow + Geometry.todoGap)
+
+    // Without a notch, something to do is enough to make the pill the busy one.
+    let pill = Geometry.layout(external, notch: nil, count: 0, todos: 1, waiting: 1)
+    eq(pill.islandClosed.width, Geometry.pillWidth)
+}
+
 print(failures == 0 ? "\nall passed" : "\n\(failures) failed")
 exit(failures == 0 ? 0 : 1)

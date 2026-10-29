@@ -96,6 +96,7 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
     static let debug = ProcessInfo.processInfo.environment["LEDGE_DEBUG"] != nil // LEDGE_DEBUG=1: log state changes and timings
 
     let store: ShelfStore
+    let todos: TodoStore
     let activities: ActivityCenter
     var onChange: (() -> Void)? // the item count changed (for the menu bar)
     private(set) var state: IslandState = .closed
@@ -110,13 +111,33 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
     private var screensAsleep = false
     private let drags = DragWatch()
     private let levels = AudioLevels()
+    private let listen = Listen()
     private let preview = Preview()
     private let textDir = FileManager.default.temporaryDirectory.appendingPathComponent("Ledge Shelf")
 
-    init(store: ShelfStore, activities: ActivityCenter, webRoot: URL) {
+    init(store: ShelfStore, todos: TodoStore, activities: ActivityCenter, webRoot: URL) {
         self.store = store
+        self.todos = todos
         self.activities = activities
         super.init()
+        // Siri and Shortcuts write to this same list, through Sources/Intents.swift.
+        Todos.store = todos
+        Todos.changed = { [weak self] in self?.todosChanged() }
+        Todos.showShelf = { [weak self] in self?.show() }
+        Todos.flash = { [weak self] in self?.flash() }
+        listen.onStart = { [weak self] in self?.emit("listening", ["on": true, "text": ""]) }
+        listen.onText = { [weak self] text in self?.emit("listening", ["on": true, "text": text]) }
+        listen.onLevels = { [weak self] lv in self?.emit("micLevels", lv.map { ($0 * 100).rounded() / 100 }) }
+        listen.onDone = { [weak self] said in
+            guard let self else { return }
+            // What was said becomes a todo here, not in the page, so it lands even if the island is busy.
+            let added = said.flatMap { self.todos.add($0) }
+            if added != nil { self.todosChanged() }
+            self.emit("listening", ["on": false, "text": added?.text ?? "", "added": added != nil, "heard": said != nil])
+        }
+        listen.onTrouble = { [weak self] why in
+            self?.emit("listening", ["on": false, "text": "", "added": false, "trouble": why])
+        }
         let config = WKWebViewConfiguration()
         config.setURLSchemeHandler(AppScheme(root: webRoot), forURLScheme: "ledge")
         config.userContentController.addScriptMessageHandler(WeakHandler(self), contentWorld: .page, name: "ledge")
@@ -210,10 +231,11 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
 
     func layout() -> ShelfLayout {
         let live = activities.list.count
-        guard let s = screen else { return Geometry.layout(Display(x: 0, y: 0, width: 1440, height: 900, menuBar: 24), notch: nil, count: store.items.count, live: live > 0, activities: live, style: Prefs.pillStyle) }
+        let onList = todos.items.count, waiting = todos.open
+        guard let s = screen else { return Geometry.layout(Display(x: 0, y: 0, width: 1440, height: 900, menuBar: 24), notch: nil, count: store.items.count, live: live > 0, activities: live, todos: onList, waiting: waiting, style: Prefs.pillStyle) }
         let menuBar = max(s.frame.maxY - s.visibleFrame.maxY, NSStatusBar.system.thickness)
         let d = Display(x: Int(s.frame.minX), y: 0, width: Int(s.frame.width), height: Int(s.frame.height), menuBar: Int(menuBar.rounded()))
-        return Geometry.layout(d, notch: notch, count: store.items.count, live: live > 0, activities: live, style: Prefs.pillStyle)
+        return Geometry.layout(d, notch: notch, count: store.items.count, live: live > 0, activities: live, todos: onList, waiting: waiting, style: Prefs.pillStyle)
     }
 
     /// The pointer, with a top-left origin like the layout.
@@ -270,6 +292,7 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
         if next == state && !focus { return }
         if next == .peek && state == .open { return } // hovering doesn't downgrade a Shelf opened on purpose
         if Island.debug { NSLog("state %@ → %@", state.rawValue, next.rawValue) }
+        if next == .closed && listen.running { listen.stop(keep: true) }
         state = next
         place()
         if next == .open && focus { takeKeys() }
@@ -344,6 +367,19 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
         onChange?()
     }
 
+    /// After the todo list changes, wherever from: the island, a ledge://todo URL, or Siri.
+    func todosChanged() {
+        emit("todos", todosJSON())
+        place() // the open island makes room for the list, and the closed one counts what's left
+        onChange?()
+    }
+
+    private func todosJSON() -> [[String: Any]] {
+        guard let data = try? JSONEncoder().encode(todos.items),
+              let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [] }
+        return list
+    }
+
     private func warmThumbnails() {
         Thumbnails.warm(store.items.filter { $0.kind == "file" }.compactMap(\.path))
     }
@@ -367,6 +403,12 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
         setState(.open, focus: true)
     }
 
+    /// Say a todo instead of typing it. Opens the island, then listens until you stop talking.
+    func toggleListening() {
+        if !listen.running { setState(.open, focus: true) }
+        listen.toggle()
+    }
+
     private func existingFiles(_ ids: [String]) -> [ShelfItem] {
         store.get(ids).filter { $0.kind == "file" && FileManager.default.fileExists(atPath: $0.path ?? "") }
     }
@@ -383,7 +425,10 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
         } catch { return nil }
     }
 
-    func cleanUp() { try? FileManager.default.removeItem(at: textDir) }
+    func cleanUp() {
+        listen.stop(keep: false)
+        try? FileManager.default.removeItem(at: textDir)
+    }
 
     // ---------- the page ----------
 
@@ -395,6 +440,7 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
         ready = true
         if Island.debug { NSLog("page ready in %.0f ms", (CACurrentMediaTime() - started) * 1000) }
         emit("prefs", Prefs.page)
+        emit("todos", todosJSON())
         place()
         panel.orderFrontRegardless()
         warmThumbnails()
@@ -512,6 +558,28 @@ final class Island: NSObject, NSWindowDelegate, WKNavigationDelegate, WKScriptMe
             reply(nil, nil)
         case "drag":
             dragOut(existingFiles(strings(0)).compactMap(\.path))
+            reply(nil, nil)
+        case "listen":
+            toggleListening()
+            reply(nil, nil)
+        case "stopListening":
+            listen.stop(keep: args.count > 0 ? (args[0] as? Bool ?? false) : false)
+            reply(nil, nil)
+        case "todos":
+            reply(todosJSON(), nil)
+        case "addTodo":
+            let added = todos.add(string(0)) != nil
+            if added { todosChanged() }
+            reply(added, nil)
+        case "setTodoDone":
+            let done = args.count > 1 ? (args[1] as? Bool ?? false) : false
+            if todos.set(string(0), done: done) { todosChanged() }
+            reply(nil, nil)
+        case "removeTodo":
+            if todos.remove(strings(0)) > 0 { todosChanged() }
+            reply(nil, nil)
+        case "clearDoneTodos":
+            if todos.clearDone() > 0 { todosChanged() }
             reply(nil, nil)
         case "activities":
             reply(activities.json(), nil)

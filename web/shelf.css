@@ -92,7 +92,7 @@ body.is-open .clip::after { opacity: 1; }
 }
 .shoulder.left { left: calc(-1 * var(--sh)); background: radial-gradient(circle at 0 100%, transparent calc(var(--sh) - 0.5px), #000 var(--sh)); }
 .shoulder.right { right: calc(-1 * var(--sh)); background: radial-gradient(circle at 100% 100%, transparent calc(var(--sh) - 0.5px), #000 var(--sh)); }
-body:not(.has-items):not(.live):not(.is-open) .shoulder { opacity: 0; }
+body:not(.has-items):not(.has-todos):not(.live):not(.is-open) .shoulder { opacity: 0; }
 
 /* A quick swallow when something is dropped in. */
 .clip.gulp { animation: gulp 0.5s var(--bouncy); }
@@ -103,7 +103,7 @@ body:not(.has-items):not(.live):not(.is-open) .shoulder { opacity: 0; }
    corner rounded. */
 body.flat:not(.is-open) .clip { background: #000; border-radius: calc(var(--h) / 2); box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.14), 0 2px 8px rgba(0, 0, 0, 0.22); }
 body.flat .shoulder { display: none; }
-body.flat:not(.has-items):not(.live) .ears { display: none; }
+body.flat:not(.has-items):not(.has-todos):not(.live) .ears { display: none; }
 body.flat.is-open .clip { border-radius: 30px; }
 body.flat .ears { padding: 0 8px 0 5px; }
 body.flat .ear-thumb, body.flat .ear-thumb img { width: 16px; height: 16px; border-radius: 50%; }
@@ -121,7 +121,7 @@ body.flat .ear-count { font-size: 12px; }
   padding: 0 10px;
   transition: opacity 0.18s, transform 0.3s var(--settle);
 }
-body.is-open .ears, body:not(.has-items) .ears, body:not(.placed) .ears, body.live .ears:not(.live-ears) { opacity: 0; transform: scale(0.8); pointer-events: none; }
+body.is-open .ears, body:not(.has-items):not(.has-todos) .ears, body:not(.placed) .ears, body.live .ears:not(.live-ears) { opacity: 0; transform: scale(0.8); pointer-events: none; }
 body.live:not(.is-open).placed .live-ears { opacity: 1; transform: none; }
 body:not(.live) .live-ears { opacity: 0; transform: scale(0.8); pointer-events: none; }
 .ear-thumb {
@@ -138,10 +138,81 @@ body:not(.live) .live-ears { opacity: 0; transform: scale(0.8); pointer-events: 
 .ear-thumb.note { background: #f5f5f7; color: #1d1d1f; }
 .ear-thumb.link { background: var(--accent-soft); color: #aebdff; }
 .ear-count { font-weight: 600; font-size: 13px; font-variant-numeric: tabular-nums; min-width: 16px; text-align: right; }
-.ears.bump .ear-thumb { animation: pop 0.6s var(--bouncy); }
+.ear-count:empty { min-width: 0; }
+.ear-end { display: flex; align-items: center; gap: 6px; }
+/* Still to do, beside the notch: a tick and a number. */
+.ear-todo { display: inline-flex; align-items: center; gap: 3px; font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--good); }
+.ear-todo:empty { display: none; }
+body.flat .ear-todo { font-size: 11px; }
+.ears.bump .ear-thumb, .ears.bump .ear-todo { animation: pop 0.6s var(--bouncy); }
 @keyframes pop { from { transform: scale(0.3) translateY(-8px); opacity: 0; } }
 .tick { animation: tick 0.4s var(--bouncy); display: inline-block; }
 @keyframes tick { from { transform: translateY(70%); opacity: 0; } }
+
+/* ---------- what's still to do ---------- */
+
+/* A row for each todo, between what's live and the Shelf's items. Taller than three and it scrolls;
+   the island's own height comes from Geometry.layout, which counts the same rows. */
+.todos {
+  flex: none;
+  max-height: 88px; /* three rows; Geometry.maxTodoRows reserves the same room */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 16px 0;
+  display: flex;
+  flex-direction: column;
+}
+.todos:empty { display: none; }
+.todos::-webkit-scrollbar { display: none; }
+.todo {
+  position: relative;
+  height: 26px;
+  flex: none;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 24px 0 6px;
+  border-radius: 8px;
+  transition: background 0.15s;
+  animation: hint-in 0.3s var(--settle);
+}
+.todo:hover { background: var(--glass); }
+.tick-box {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  padding: 0;
+  border: 1.5px solid rgba(245, 245, 247, 0.4);
+  border-radius: 50%;
+  background: transparent;
+  color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.2s var(--bouncy);
+}
+.tick-box:hover { border-color: var(--good); }
+.tick-box:active { transform: scale(0.86); }
+.tick-box:focus { outline: none; }
+.tick-box:focus-visible { box-shadow: 0 0 0 2px rgba(123, 150, 255, 0.75); }
+.todo.done .tick-box { background: var(--good); border-color: var(--good); color: #04120a; }
+.todo.done .tick-box .icon { animation: pop 0.45s var(--bouncy); }
+.todo-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s, opacity 0.2s;
+}
+.todo.done .todo-text { color: var(--ink-3); text-decoration: line-through; opacity: 0.7; }
+.todo .x { top: 50%; right: 3px; margin-top: -10px; }
+.todo:hover .x { opacity: 1; transform: scale(1); }
+.todo.leave { animation: leave-row 0.26s var(--settle) forwards; pointer-events: none; }
+@keyframes leave-row { to { opacity: 0; height: 0; transform: scale(0.94); } }
 
 /* ---------- open ---------- */
 
@@ -387,6 +458,21 @@ body.is-open .empty-art { animation: float 3.2s ease-in-out infinite; }
 
 /* A quick note: typing in the open Shelf writes one here, in the items' place, and ⏎ puts it on the Shelf. */
 .composer { display: none; flex: 1; min-height: 0; padding: 8px 18px 0; }
+/* Listening: bars down the left of the box, moving with the microphone. */
+.mic { display: none; align-items: center; gap: 3px; height: 22px; padding-right: 10px; flex: none; }
+body.listening .composer { display: flex; }
+body.listening .mic { display: flex; }
+.mic i {
+  width: 3px;
+  height: 22px;
+  border-radius: 2px;
+  background: var(--good);
+  transform: scaleY(0.12);
+  transform-origin: 50% 50%;
+  transition: transform 0.07s linear;
+}
+body.listening .note-input { caret-color: var(--good); }
+body.listening .note-input::placeholder { color: rgba(60, 207, 122, 0.55); }
 body.writing .composer { display: flex; animation: hint-in 0.3s var(--settle); }
 body.writing .tray-wrap { display: none; }
 .note-input {

@@ -34,6 +34,7 @@ struct ShelfLayout: Equatable {
     var insetClosed: Int // how far below the top edge the island floats (a pill on a screen without a notch)
     var insetOpen: Int
     var rows: Int // live activity rows in the open island
+    var todoRows: Int // todo rows in the open island
 
     /// What the page reads (shelf.js applyState).
     var json: [String: Any] {
@@ -42,7 +43,8 @@ struct ShelfLayout: Equatable {
         return [
             "hasNotch": hasNotch, "notch": size(notch), "bar": bar, "shoulder": shoulder,
             "closed": box(closed), "open": box(open),
-            "island": ["closed": size(islandClosed), "open": size(islandOpen)], "inset": ["closed": insetClosed, "open": insetOpen], "rows": rows,
+            "island": ["closed": size(islandClosed), "open": size(islandOpen)], "inset": ["closed": insetClosed, "open": insetOpen],
+            "rows": rows, "todoRows": todoRows,
         ]
     }
 }
@@ -60,6 +62,10 @@ enum Geometry {
     static let idlePillWidth = PillStyle().idleWidth // …and when there's nothing to show: a small pill, always there to hover or drop onto
     static let row = 64 // one live activity in the open island
     static let maxRows = 2
+    static let todoRow = 30 // one todo in the open island
+    static let maxTodoRows = 3 // more than that and the list scrolls
+    static let todoGap = 8 // room above and below the todo list
+    static let todoEar = 26 // closed: room for the checklist count beside the item count
     static let reachX = 80 // while dragging, how far beside the closed island the pointer opens the Shelf
     static let reachY = 24 // …and how far below the menu bar
 
@@ -72,7 +78,9 @@ enum Geometry {
 
     /// Sizes and screen positions for each state. notch is ignored if it was measured on a screen of a different width.
     /// live: something is happening (music, another app's activity), so the closed island shows it.
-    static func layout(_ d: Display, notch: Notch?, count: Int, live: Bool = false, activities: Int = 0, style: PillStyle = PillStyle()) -> ShelfLayout {
+    /// todos: how many are on the list, each a row in the open island. waiting: how many of those are still to
+    /// do, which is the number the closed island shows (a list of nothing but ticked-off ones shows nothing).
+    static func layout(_ d: Display, notch: Notch?, count: Int, live: Bool = false, activities: Int = 0, todos: Int = 0, waiting: Int = 0, style: PillStyle = PillStyle()) -> ShelfLayout {
         let menuBar = max(24, d.menuBar)
         let hasNotch = notch != nil && notch!.screenWidth == d.width
         let n = hasNotch ? notch! : Notch(left: Int((Double(d.width - noNotchWidth) / 2).rounded()), width: noNotchWidth, height: menuBar, screenWidth: d.width)
@@ -87,13 +95,13 @@ enum Geometry {
             let x = min(max(center - Double(width) / 2, Double(d.x)), Double(d.x + d.width - width)).rounded()
             return Box(x: Int(x), y: d.y, width: width, height: h)
         }
-        let shows = count > 0 || live // something to show beside the notch, or in the pill
+        let shows = count > 0 || live || waiting > 0 // something to show beside the notch, or in the pill
         // No notch: a pill floating in the middle of the menu bar, a few points clear of its edges.
         let pillHeight = min(max(style.height ?? (menuBar - 6), 12), 60)
         let pillInset = min(max(style.gap ?? (menuBar - pillHeight) / 2, 0), 40)
         let strip = !hasNotch && !shows && !style.alwaysShow
         let islandClosed: Size
-        if hasNotch { islandClosed = Size(width: fit(Double(n.width + (shows ? ear * 2 : 0))), height: n.height) }
+        if hasNotch { islandClosed = Size(width: fit(Double(n.width + (shows ? ear * 2 + (waiting > 0 ? todoEar : 0) : 0))), height: n.height) }
         else if strip { islandClosed = Size(width: fit(Double(n.width)), height: edgeHeight) } // nearly invisible, but catches the pointer and drops
         else { islandClosed = Size(width: fit(Double(max(24, shows ? style.activeWidth : style.idleWidth))), height: pillHeight) }
         let closedInset = hasNotch || strip ? 0 : pillInset
@@ -101,13 +109,15 @@ enum Geometry {
         // An empty Shelf is exactly the notch (invisible). With something to show, the window also fits the shoulders.
         let closed = box(islandClosed.width + (hasNotch && shows ? shoulder * 2 : 0), islandClosed.height + closedInset)
         let rows = min(activities, maxRows)
+        let todoRows = min(todos, maxTodoRows)
         let islandOpen = Size(width: fit(Double(min(max(style.openWidth, 400, n.width + ear * 2), d.width - side * 2))),
-                              height: openHeight + (hasNotch ? n.height - 32 : 0) + rows * row)
+                              height: openHeight + (hasNotch ? n.height - 32 : 0) + rows * row
+                                  + (todoRows > 0 ? todoRows * todoRow + todoGap : 0))
         let open = box(islandOpen.width + side * 2, islandOpen.height + below + openInset)
         return ShelfLayout(hasNotch: hasNotch, notch: Size(width: n.width, height: hasNotch ? n.height : 0),
                            bar: hasNotch ? n.height : menuBar, shoulder: shoulder,
                            closed: closed, open: open, islandClosed: islandClosed, islandOpen: islandOpen,
-                           insetClosed: closedInset, insetOpen: openInset, rows: rows)
+                           insetClosed: closedInset, insetOpen: openInset, rows: rows, todoRows: todoRows)
     }
 
     /// While something is being dragged: is the pointer close enough to the closed Shelf to open it?

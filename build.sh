@@ -1,5 +1,7 @@
 #!/bin/bash
 # Builds Ledge with the Xcode Command Line Tools: no Xcode project, no dependencies.
+# The one exception is the Siri and Shortcuts actions, which need a tool that only full Xcode ships (see
+# appintents() below). Without it everything else is built as usual, and the build says so.
 #   ./build.sh          → dist/Ledge.app (universal: Apple silicon + Intel)
 #   ./build.sh run      → build, then open it (quits a running copy first)
 #   ./build.sh test     → run the tests
@@ -16,19 +18,64 @@ FLAGS=(-swift-version 5 -Osize -whole-module-optimization)
 
 test_() {
   mkdir -p .build
-  swiftc "${FLAGS[@]}" tests/main.swift Sources/ShelfStore.swift Sources/Layout.swift Sources/Activities.swift Sources/Updates.swift -o .build/tests
+  swiftc "${FLAGS[@]}" tests/main.swift Sources/ShelfStore.swift Sources/TodoStore.swift Sources/Layout.swift Sources/Activities.swift Sources/Updates.swift -o .build/tests
   .build/tests
+}
+
+# Siri and Shortcuts: the actions in Sources/Intents.swift reach the system through a Metadata.appintents
+# bundle, built from the compiler's const values by a processor that only full Xcode ships. With just the
+# Command Line Tools there is nothing to run it with, so the bundle is left out: the todo list, ledge://todo
+# and every other part of Ledge work exactly the same, and only Siri, Shortcuts and Spotlight go without.
+appintents() {
+  # The processor ships with full Xcode only. Look where the developer directory points, then where Xcode
+  # usually is, so a Mac with Xcode installed but the Command Line Tools selected still gets the actions.
+  local proc="" tc dir
+  for dir in "$(xcode-select -p 2>/dev/null)" /Applications/Xcode.app/Contents/Developer; do
+    [ -n "$dir" ] || continue
+    if [ -x "$dir/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor" ]; then
+      proc="$dir/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor"
+      tc="$dir/Toolchains/XcodeDefault.xctoolchain"
+      break
+    fi
+  done
+  if [ -z "$proc" ]; then
+    echo "note: no appintentsmetadataprocessor (that one needs full Xcode) — building without the Siri and Shortcuts actions"
+    return 0
+  fi
+  # Absolute paths: the processor resolves them against its own working directory, not ours.
+  ls "$PWD"/Sources/*.swift > .build/appintents-sources.txt
+  echo "$PWD/.build/bin/Ledge-arm64.swiftconstvalues" > .build/appintents-constvalues.txt
+  "$proc" --output "$APP/Contents/Resources" \
+    --toolchain-dir "$tc" \
+    --module-name Ledge \
+    --sdk-root "$(xcrun --show-sdk-path)" \
+    --xcode-version "$(plutil -extract ProductBuildVersion raw "$(dirname "$tc")/../../version.plist" 2>/dev/null || echo 0)" \
+    --platform-family macOS \
+    --deployment-target "$MIN_MACOS" \
+    --target-triple "arm64-apple-macos$MIN_MACOS" \
+    --source-file-list .build/appintents-sources.txt \
+    --swift-const-vals-list .build/appintents-constvalues.txt \
+    --force --quiet-warnings >.build/appintents.log 2>&1
+  [ -f "$APP/Contents/Resources/Metadata.appintents/extract.actionsdata" ] \
+    || { echo "appintentsmetadataprocessor produced no metadata:"; cat .build/appintents.log; exit 1; }
+  echo "Siri and Shortcuts actions: Metadata.appintents"
 }
 
 app() {
   rm -rf "$APP" .build/bin
   mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/web" .build/bin
   for arch in arm64 x86_64; do
-    swiftc "${FLAGS[@]}" -target "$arch-apple-macos$MIN_MACOS" Sources/*.swift -o ".build/bin/Ledge-$arch"
+    # -module-name keeps the App Intents metadata's type names stable (Ledge.AddTodoIntent), and
+    # the const values are what the metadata processor reads to find the intents.
+    swiftc "${FLAGS[@]}" -module-name Ledge -target "$arch-apple-macos$MIN_MACOS" \
+      -Xfrontend -const-gather-protocols-file -Xfrontend scripts/appintents-protocols.json \
+      -emit-const-values-path ".build/bin/Ledge-$arch.swiftconstvalues" \
+      Sources/*.swift -o ".build/bin/Ledge-$arch"
   done
   lipo -create .build/bin/Ledge-arm64 .build/bin/Ledge-x86_64 -output "$APP/Contents/MacOS/Ledge"
   strip -x "$APP/Contents/MacOS/Ledge"
   cp web/*.html web/*.css web/*.js "$APP/Contents/Resources/web/"
+  appintents
 
   # The icon: drawn once, then cached in .build (delete .build/AppIcon.icns to redraw it).
   if [ ! -f .build/AppIcon.icns ]; then
@@ -69,6 +116,8 @@ app() {
     </dict>
   </array>
   <key>NSAudioCaptureUsageDescription</key><string>Ledge listens to Music or Spotify while a song plays, so the bars in the island move to the music. Nothing is recorded or saved.</string>
+  <key>NSMicrophoneUsageDescription</key><string>Ledge listens when you ask it to (⌃⌥T), so you can say a todo instead of typing it. It listens only while you hold the island open for it, and nothing is recorded or saved.</string>
+  <key>NSSpeechRecognitionUsageDescription</key><string>Ledge turns what you say into a todo using the recogniser built into macOS. It runs on this Mac: nothing you say is sent anywhere.</string>
   <key>NSAppleEventsUsageDescription</key><string>Ledge plays, pauses and skips songs in Music and Spotify when you use the controls in the island.</string>
   <key>CFBundleDocumentTypes</key>
   <array>

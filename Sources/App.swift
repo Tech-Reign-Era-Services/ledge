@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let activities = ActivityCenter()
     private lazy var updater = Updater(activities: activities)
     private var hotKey: HotKey?
+    private var sayKey: HotKey?
     private var statusItem: NSStatusItem!
     private let menu = NSMenu()
     private let settings = SettingsWindow()
@@ -24,8 +25,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Prefs.register()
         importInletShelf()
         let store = ShelfStore(dir: AppDelegate.dataDir)
+        let todos = TodoStore(dir: AppDelegate.dataDir)
         let web = Bundle.main.resourceURL!.appendingPathComponent("web")
-        island = Island(store: store, activities: activities, webRoot: web)
+        island = Island(store: store, todos: todos, activities: activities, webRoot: web)
         activities.onChange = { [weak self] _ in self?.island.activitiesChanged() }
         activities.start()
         island.onChange = { [weak self] in self?.refreshIcon() }
@@ -33,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updater.start()
 
         hotKey = HotKey(keyCode: kVK_ANSI_S, modifiers: controlKey | optionKey) { [weak self] in self?.island.toggle() }
+        sayKey = HotKey(keyCode: kVK_ANSI_T, modifiers: controlKey | optionKey, id: 2) { [weak self] in self?.island.toggleListening() }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.image = AppDelegate.menuBarIcon()
@@ -54,10 +57,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     /// Files opened with Ledge (`open -a Ledge file…`, or dropped on its icon) go on the Shelf.
     /// ledge://activity?… and ledge://activity/end?… start, update and end another app's live activity.
+    /// ledge://todo?text=… adds a todo, and ledge://todo/done?text=… ticks one off (Siri and Shortcuts use
+    /// Intents.swift instead; this is for scripts and anything that can open a URL).
+    /// ledge://siri shows how to give Siri a phrase, and ledge://say listens for a spoken todo.
     func application(_ sender: NSApplication, open urls: [URL]) {
         if urls.contains(where: { $0.scheme == "ledge" && $0.host == "settings" }) { settings.show() } // ledge://settings
         // ledge://update: the update in the island was clicked. Only ever a release checked in Updates.parse, newer than this one.
         if urls.contains(where: { $0.scheme == "ledge" && $0.host == "update" }) { updater.install() }
+        // ledge://siri: the same as "Set Up Siri…" in the menu bar.
+        if urls.contains(where: { $0.scheme == "ledge" && $0.host == "siri" }) { setUpSiri() }
+        // ledge://say: start listening for a todo, the same as ⌃⌥T.
+        if urls.contains(where: { $0.scheme == "ledge" && $0.host == "say" }) { island?.toggleListening() }
+        for url in urls where url.scheme == "ledge" && url.host == "todo" {
+            let fields = (URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? [])
+                .reduce(into: [String: String]()) { d, q in if let v = q.value { d[q.name] = v } }
+            guard let text = fields["text"] ?? fields["title"], let island else { continue }
+            let changed = url.path == "/done" ? island.todos.complete(text) != nil : island.todos.add(text) != nil
+            if changed { island.todosChanged(); island.flash() }
+        }
         for url in urls where url.scheme == "ledge" && url.host == "activity" {
             let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
             let fields = items.reduce(into: [String: String]()) { d, q in if let v = q.value { d[q.name] = v } }
@@ -80,6 +97,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let clear = NSMenuItem(title: "Clear Shelf", action: n > 0 ? #selector(clearShelf) : nil, keyEquivalent: "")
         menu.addItem(clear)
         menu.addItem(.separator())
+        let waiting = island.todos.open
+        let todos = NSMenuItem(title: waiting > 0 ? "\(waiting) still to do" : "Nothing to do", action: #selector(showShelf), keyEquivalent: "")
+        menu.addItem(todos)
+        let say = NSMenuItem(title: "Say a Todo", action: #selector(sayTodo), keyEquivalent: sayKey?.ok == true ? "t" : "")
+        say.keyEquivalentModifierMask = [.control, .option]
+        menu.addItem(say)
+        let ticked = island.todos.items.count - waiting
+        let clearDone = NSMenuItem(title: ticked > 0 ? "Clear \(ticked) Ticked Off" : "Clear Ticked Off",
+                                   action: ticked > 0 ? #selector(clearDoneTodos) : nil, keyEquivalent: "")
+        menu.addItem(clearDone)
+        menu.addItem(NSMenuItem(title: "Set Up Siri…", action: #selector(setUpSiri), keyEquivalent: ""))
+        menu.addItem(.separator())
         let login = NSMenuItem(title: "Open at Login", action: #selector(toggleLogin), keyEquivalent: "")
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
@@ -95,6 +124,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func showShelf() { island.show() }
     @objc private func showSettings() { settings.show() }
     @objc private func clearShelf() { island.clear() }
+    @objc private func clearDoneTodos() { if island.todos.clearDone() > 0 { island.todosChanged() } }
+    @objc private func sayTodo() { island.toggleListening() }
+
+    /// Hand Shortcuts a ready-made "Add Todo" shortcut to add. Siri runs any shortcut by name, so this works
+    /// even where the App Shortcut phrases in Intents.swift haven't settled yet.
+    /// Siri already knows Ledge's actions ("Add a todo to Ledge"), but macOS can take a restart to pick the
+    /// spoken phrases up. A shortcut of your own works at once, so this shows how to make one and opens Shortcuts.
+    @objc private func setUpSiri() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Give Siri a phrase for Ledge"
+        alert.informativeText = """
+            Try saying "Add a todo to Ledge" first \u{2014} it may already work.
+
+            If Siri doesn't know it yet, make a shortcut of your own, which works straight away:
+
+            \(SiriSetup.steps)
+            """
+        alert.addButton(withTitle: "Open Shortcuts")
+        alert.addButton(withTitle: "Cancel")
+        if alert.runModal() == .alertFirstButtonReturn { SiriSetup.openShortcuts() }
+    }
     @objc private func checkForUpdates() { if updater.available != nil { updater.install() } else { updater.check(manual: true) } }
 
     @objc private func toggleLogin() {
@@ -112,14 +163,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func about() {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.orderFrontStandardAboutPanel(options: [
-            .credits: NSAttributedString(string: "Keep files, text and links in the notch for a moment.\nHover over the notch, drag something to it, or press ⌃⌥S.",
+            .credits: NSAttributedString(string: "Keep files, text and links in the notch for a moment, and what you have to do.\nHover over the notch, drag something to it, or press ⌃⌥S.",
                                          attributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]),
         ])
     }
 
     private func refreshIcon() {
         let n = island?.store.items.count ?? 0
-        statusItem?.button?.title = n > 0 ? " \(n)" : ""
+        let waiting = island?.todos.open ?? 0
+        // Items on the Shelf, then what's still to do after a tick: " 3 ✓2".
+        statusItem?.button?.title = [n > 0 ? " \(n)" : "", waiting > 0 ? " ✓\(waiting)" : ""].joined()
     }
 
     /// The Shelf glyph from the page (a tray with a shelf across it), as a template image for the menu bar.

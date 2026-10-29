@@ -19,7 +19,10 @@ const S = {
   dragOut: false, // dragging something out of the Shelf (so it isn't taken as a drop onto it)
   shown: false, // the first list has been drawn: later additions animate in
   previewing: null, // id of the item open in Quick Look
-  writing: false, // a quick note is being written (its draft stays in the box if the Shelf closes)
+  writing: false, // the composer is open (its draft stays in the box if the Shelf closes)
+  mode: 'note', // what the composer is writing: a note for the Shelf, or something to do
+  todos: [], // what's still to do, then what's been ticked off
+  listening: false, // saying a todo instead of typing it
 };
 const timers = {};
 const later = (name, ms, fn) => { clearTimeout(timers[name]); timers[name] = setTimeout(fn, ms); };
@@ -76,7 +79,7 @@ function applyState({ state, layout }) {
     body.classList.remove('dragging');
     renderItems();
   }
-  if (!open && !note.value.trim()) endNote();
+  if (!open && !note.value.trim()) closeComposer();
   if (state === 'open') (S.writing ? note : $('tray')).focus();
 }
 
@@ -262,11 +265,14 @@ function renderHint() {
   const n = S.items.length;
   const k = (key) => h('kbd', {}, key);
   let el = spoken;
-  if (!el && S.writing) el = h('span', {}, k('⏎'), ' to keep it on the Shelf · ', k('⇧⏎'), ' new line · ', k('Esc'), ' to cancel');
+  if (!el && S.listening) el = h('span', {}, h('span', { class: 'good' }, icon('mic', 12)), 'Listening… stop talking when you\u2019re done · ', k('Esc'), ' to cancel');
+  else if (!el && S.writing && S.mode === 'todo') el = h('span', {}, k('⏎'), ' to put it on the list · ', k('Esc'), ' to stop');
+  else if (!el && S.writing) el = h('span', {}, k('⏎'), ' to keep it on the Shelf · ', k('⇧⏎'), ' new line · ', k('Esc'), ' to cancel');
   else if (!el && S.previewing) el = h('span', {}, k('Space'), ' closes the preview · ', k('←'), k('→'), ' previews the next one');
   else if (!el && S.selected.size) el = h('span', {}, k('Space'), ' to preview · ', k('⌘C'), ' to copy · ', k('⌫'), ' to remove · or drag it out');
   else if (!el && n) el = h('span', {}, 'Drag out, or ', k('⌘C'), ' then ', k('⌘V'), ' anywhere · select and ', k('Space'), ' to preview');
-  else if (!el) el = h('span', {}, 'Drag things here, start typing a note, or copy and press ', k('⌘V'));
+  else if (!el && S.todos.length) el = h('span', {}, 'Tick things off as you do them · drag things here · ', k('⌘T'), ' for another todo');
+  else if (!el) el = h('span', {}, 'Drag things here, start typing a note, or ', k('⌘T'), ' for something to do');
   const hint = $('hint');
   if (hint.firstChild && hint.firstChild.textContent === el.textContent) return; // unchanged: don't replay its entrance
   hint.replaceChildren(el);
@@ -277,14 +283,19 @@ function renderHead() {
   const sel = S.selected.size;
   setCount($('count'), n ? String(n) : '');
   if (S.writing) {
+    const todo = S.mode === 'todo';
     $('actions').replaceChildren(
-      h('button', { class: 'act', title: 'Put the note on the Shelf (⏎)', onclick: keepNote }, icon('check', 13), 'Keep'),
-      h('button', { class: 'act quiet', title: 'Throw the note away (Esc)', onclick: endNote }, icon('x', 13), 'Cancel'));
+      h('button', { class: 'act', title: todo ? 'Put it on the list (⏎)' : 'Put the note on the Shelf (⏎)', onclick: keepComposed },
+        icon('check', 13), todo ? 'Add' : 'Keep'),
+      h('button', { class: 'act quiet', title: todo ? 'Stop adding (Esc)' : 'Throw the note away (Esc)', onclick: closeComposer },
+        icon('x', 13), todo ? 'Done' : 'Cancel'));
     return;
   }
   $('actions').replaceChildren(
     // With a selection, Copy and Remove need the room; typing still starts a note.
     !sel && h('button', { class: 'act only', title: 'Write a quick note (or just start typing)', 'aria-label': 'New note', onclick: () => startNote() }, icon('pen', 13)),
+    !sel && h('button', { class: 'act only', title: 'Add something to do (⌘T)', 'aria-label': 'New todo', onclick: () => startTodo() }, icon('checklist', 13)),
+    !sel && h('button', { class: `act only ${S.listening ? 'done' : ''}`, title: 'Say a todo (⌃⌥T)', 'aria-label': 'Say a todo', onclick: () => api.listen() }, icon('mic', 13)),
     h('button', { class: `act ${S.copied ? 'done' : ''}`, disabled: !n, title: 'Put these on the clipboard, then ⌘V anywhere', onclick: () => copy(targetIds()) },
       icon(S.copied ? 'check' : 'copy', 13), S.copied ? 'Copied' : sel ? `Copy ${sel}` : 'Copy all'),
     h('button', { class: 'act quiet', disabled: !n, title: sel ? 'Remove the selected items (⌫)' : 'Empty the Shelf. Your files stay where they are.', onclick: () => { if (sel) api.remove([...S.selected]); else api.clear(); } },
@@ -313,6 +324,79 @@ function renderEars(prevCount) {
     }
   }
   if (S.shown && n > prevCount) replay($('ears'), 'bump');
+}
+
+/** Beside the notch, under the count: a tick and how many things are still to do. */
+function renderTodoEar(open, prevOpen) {
+  const ear = $('ear-todo');
+  if (!open) { ear.replaceChildren(); return; }
+  ear.replaceChildren(icon('check', 11), h('span', { class: S.shown ? 'tick' : '' }, String(open)));
+  if (S.shown && open > prevOpen) replay($('ears'), 'bump');
+}
+
+// ---------- what's still to do ----------
+
+const todoRows = new Map(); // todo id → its row, kept between renders so only real changes animate
+
+function makeTodoRow(id) {
+  const todo = () => S.todos.find((t) => t.id === id);
+  const box = h('button', {
+    class: 'tick-box',
+    onclick: (e) => { e.stopPropagation(); const t = todo(); if (t) api.setTodoDone(id, !t.done); },
+  }, icon('check', 10));
+  const text = h('span', { class: 'todo-text' });
+  const row = h('div', { class: 'todo', role: 'listitem' }, box, text,
+    h('button', {
+      class: 'x', title: 'Take it off the list',
+      onclick: (e) => { e.stopPropagation(); api.removeTodo([id]); },
+    }, icon('x', 10)));
+  row.box = box;
+  row.label = text;
+  return row;
+}
+
+function updateTodoRow(row, t) {
+  row.classList.toggle('done', t.done);
+  if (row.label.textContent !== t.text) row.label.textContent = t.text;
+  row.title = t.text;
+  row.box.setAttribute('aria-pressed', t.done ? 'true' : 'false');
+  row.box.setAttribute('aria-label', t.done ? `Put ${t.text} back on the list` : `Tick off ${t.text}`);
+  row.box.title = t.done ? 'Put it back on the list' : 'Tick it off';
+  row.querySelector('.x').setAttribute('aria-label', `Take ${t.text} off the list`);
+}
+
+function renderTodos() {
+  const list = $('todos');
+  const ids = new Set(S.todos.map((t) => t.id));
+  // Rows that left: fade away, then go.
+  for (const [id, row] of todoRows) {
+    if (ids.has(id)) continue;
+    todoRows.delete(id);
+    if (reducedMotion.matches || S.state === 'closed') { row.remove(); continue; }
+    row.classList.add('leave');
+    setTimeout(() => row.remove(), 280);
+  }
+  let prev = null;
+  for (const t of S.todos) {
+    let row = todoRows.get(t.id);
+    if (!row) { row = makeTodoRow(t.id); todoRows.set(t.id, row); }
+    updateTodoRow(row, t);
+    let want = prev ? prev.nextSibling : list.firstChild;
+    while (want && want.classList.contains('leave')) want = want.nextSibling;
+    if (want !== row) list.insertBefore(row, want);
+    prev = row;
+  }
+}
+
+function setTodos(list) {
+  const was = S.todos.filter((t) => !t.done).length;
+  S.todos = list || [];
+  const open = S.todos.filter((t) => !t.done).length;
+  body.classList.toggle('has-todos', open > 0);
+  renderTodos();
+  renderTodoEar(open, was);
+  renderHead();
+  renderHint();
 }
 
 function renderItems() {
@@ -411,14 +495,56 @@ function updateFades() {
   wrap.classList.toggle('more-r', tray.scrollLeft + tray.clientWidth < tray.scrollWidth - 4);
 }
 
-// ---------- quick notes: open the Shelf and start typing ----------
+// ---------- saying a todo ----------
 
-/** Show the note box, with what was typed so far. */
-function startNote(text = '') {
+/** The app is listening, has heard something, or has stopped. */
+function setListening({ on, text, added, heard, trouble }) {
+  S.listening = !!on;
+  body.classList.toggle('listening', S.listening);
+  if (on) {
+    if (!S.writing || S.mode !== 'todo') startTodo();
+    note.value = text || '';
+    note.placeholder = 'Listening…';
+    note.blur(); // what's said goes in the box; the keyboard would fight it
+  } else {
+    note.placeholder = 'Something to do…';
+    setMicLevels(null);
+    if (trouble) {
+      closeComposer();
+      say(h('span', {}, trouble), 6000);
+    } else if (added) {
+      closeComposer();
+      say(h('span', {}, h('span', { class: 'good' }, icon('check', 12)), `Added “${text}”`), 2600);
+    } else if (!heard && !note.value.trim()) {
+      closeComposer();
+      say(h('span', {}, 'Didn\u2019t catch that \u2014 try again and start talking straight away'), 3200);
+    } else if (!note.value.trim()) {
+      closeComposer();
+    } else {
+      note.focus(); // heard something but it wasn't kept: leave it to finish by hand
+    }
+  }
+  renderHead();
+  renderHint();
+}
+
+function setMicLevels(levels) {
+  document.querySelectorAll('.mic i').forEach((el, i) => {
+    el.style.transform = `scaleY(${levels ? (0.12 + 0.88 * (levels[i] || 0)).toFixed(2) : 0.12})`;
+  });
+}
+
+// ---------- the composer: a quick note, or something to do ----------
+
+/** Show the box, for a note or a todo, with what was typed so far. */
+function startComposing(mode, text = '') {
   if (S.previewing) closePreview();
-  if (!S.writing) {
+  if (!S.writing || S.mode !== mode) {
+    S.mode = mode;
     S.writing = true;
     body.classList.add('writing');
+    note.placeholder = mode === 'todo' ? 'Something to do…' : 'A quick note…';
+    note.maxLength = mode === 'todo' ? 300 : 20000;
     S.selected.clear();
     renderItems();
   }
@@ -426,8 +552,10 @@ function startNote(text = '') {
   note.focus();
   if (text) document.execCommand('insertText', false, text);
 }
+const startNote = (text = '') => startComposing('note', text);
+const startTodo = (text = '') => startComposing('todo', text);
 
-function endNote() {
+function closeComposer() {
   note.value = '';
   if (!S.writing) return;
   S.writing = false;
@@ -437,20 +565,27 @@ function endNote() {
   if (S.state === 'open') $('tray').focus();
 }
 
-/** Put the note on the Shelf, as a note like any other text: drag it out, ⌘C it, or × it away. */
-async function keepNote() {
+/** ⏎: keep the note on the Shelf (drag it out, ⌘C it, or × it away), or put the todo on the list.
+ *  The box stays open after a todo, so several can go on one after another — as dictating them does. */
+async function keepComposed() {
   const text = note.value;
-  if (!text.trim()) return endNote();
-  endNote();
+  if (!text.trim()) return closeComposer();
+  if (S.mode === 'todo') {
+    note.value = '';
+    if (await api.addTodo(text)) say(h('span', {}, h('span', { class: 'good' }, icon('check', 12)), 'On the list'), 1600);
+    note.focus();
+    return;
+  }
+  closeComposer();
   if (await api.addText(text)) say(h('span', {}, h('span', { class: 'good' }, icon('check', 12)), 'Kept on the Shelf'), 1800);
 }
 
-/** Keys in the note box. Ledge has no Edit menu, so the usual editing shortcuts are done here. */
+/** Keys in the box. Ledge has no Edit menu, so the usual editing shortcuts are done here. */
 function noteKey(e) {
   const cmd = e.metaKey;
   const selection = () => note.value.slice(note.selectionStart, note.selectionEnd);
-  if (e.key === 'Escape') { e.preventDefault(); endNote(); return; }
-  if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.isComposing) { e.preventDefault(); keepNote(); return; }
+  if (e.key === 'Escape') { e.preventDefault(); if (S.listening) api.stopListening(false); else closeComposer(); return; }
+  if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.isComposing) { e.preventDefault(); keepComposed(); return; }
   if (!cmd) return;
   const k = e.key.toLowerCase();
   if (k === 'a') { e.preventDefault(); note.select(); }
@@ -506,8 +641,9 @@ document.addEventListener('keydown', (e) => {
   }
   // Using the keyboard means you're working in the Shelf: don't let it close when the pointer wanders off.
   if (S.state === 'peek' && (HANDLED.has(e.key) || cmd)) setState('open');
-  if (e.key === 'Escape') { if (S.previewing) closePreview(); else setState('closed'); return; }
+  if (e.key === 'Escape') { if (S.listening) api.stopListening(false); else if (S.previewing) closePreview(); else setState('closed'); return; }
   if (e.key === ' ') { e.preventDefault(); togglePreview(); return; }
+  if (cmd && e.key === 't') { e.preventDefault(); if (e.shiftKey) api.listen(); else startTodo(); return; }
   if (cmd && e.key === 'c') { e.preventDefault(); copy(targetIds()); return; }
   if (cmd && e.key === 'v') { e.preventDefault(); api.paste(); return; }
   if (cmd && e.key === 'a') { e.preventDefault(); S.selected = new Set(S.items.map((x) => x.id)); renderItems(); return; }
@@ -672,8 +808,12 @@ $('title-icon').append(icon('shelf', 14));
 $('drop-icon').append(icon('down', 18));
 api.onState(applyState);
 api.onItems(setItems);
+api.onTodos(setTodos);
+api.onListening(setListening);
+api.onMicLevels(setMicLevels);
 api.onActivities(setActivities);
 api.onLevels(setLevels);
 api.activities().then(setActivities);
 api.onFlash((ms) => later('close', ms, () => !S.hover && S.state === 'peek' && setState('closed')));
+api.todos().then(setTodos);
 api.items().then(setItems);

@@ -2,6 +2,14 @@
 
 What's new in each release, newest first. Written for people using Ledge, not for developers.
 
+## 1.6.0
+
+- **A todo list in the notch.** Press ⌘T in the Shelf (or the checklist button beside the pen) and type what you have to do. Each todo is a line with a circle: click it to tick it off, and it drops below the ones still waiting, struck through, until you × it away or choose **Clear Ticked Off** in the menu bar. Closed, the island shows a green tick and how many are still to do, beside the number of things on the Shelf.
+- **Say a todo.** Press **⌃⌥T** (or the microphone in the island) and talk. The island opens, bars move with your voice, the words appear as you say them, and when you stop talking it goes on the list. **Esc** cancels. macOS's own recogniser does the work **on your Mac** — nothing is sent anywhere, nothing is recorded, and there's no model to download: Ledge is still about 1.4 MB. macOS asks once for the microphone and once for speech recognition.
+- **Ask Siri.** Say "Ledge todo" and Siri asks what to add. "What's on my Ledge list" reads back what's still to do, "Tick off a todo in Ledge" marks one done, and "Open my Ledge" opens the island. The same four actions are in Shortcuts and Spotlight, so you can put them in a shortcut of your own or on a Stream Deck.
+- **Set Up Siri…** in the menu bar icon, for when Siri doesn't know the phrases yet. macOS can take a restart to pick them up after Ledge is first installed; in the meantime, a shortcut of your own built from Ledge's "Add a Todo" action works straight away, and Siri runs any shortcut by its name. The menu item shows the three steps and opens Shortcuts.
+- **Anything that can open a URL can add one too**: `open -g "ledge://todo?text=Buy%20milk"`, and `ledge://todo/done?text=milk` to tick it off. Asking for something already on the list doesn't add it twice.
+
 ## 1.5.0
 
 - **Text with pictures, for remote desktops.** Copy from Notes, Mail, TextEdit, Pages or Safari and press ⌘V in the Shelf: the text becomes notes and each picture becomes an image file, in order. AnyDesk and other remote desktops pass text and files, but drop pictures inside text, so now you can take the pictures across too: select one and ⌘C, or drag it over. Pasted pictures are deleted when you remove them from the Shelf.

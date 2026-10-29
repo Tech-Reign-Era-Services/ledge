@@ -31,6 +31,13 @@
     icon: invoke('icon'),
     clipboardText: invoke('clipboardText'), // for ⌘V while writing a note
     copyText: invoke('copyText'), // …and ⌘C, ⌘X
+    todos: invoke('todos'),
+    addTodo: invoke('addTodo'),
+    setTodoDone: invoke('setTodoDone'), // (id, done)
+    removeTodo: invoke('removeTodo'),
+    clearDoneTodos: invoke('clearDoneTodos'),
+    listen: invoke('listen'), // say a todo instead of typing it
+    stopListening: invoke('stopListening'), // (keep) — false throws away what was heard
     activities: invoke('activities'),
     activity: invoke('activity'), // (id, 'playpause' | 'next' | 'previous' | 'open' | 'dismiss')
     setState: send('setState'),
@@ -39,6 +46,9 @@
     pathFor: () => null,
     onState: listen('state'),
     onItems: listen('items'),
+    onTodos: listen('todos'),
+    onListening: listen('listening'), // { on, text, added, trouble }
+    onMicLevels: listen('micLevels'), // four levels 0–1 while it listens
     onFlash: listen('flash'),
     onActivities: listen('activities'),
     onPrefs: listen('prefs'), // from Settings: { hoverOpen, hoverDelay, barColor, showArtwork }
